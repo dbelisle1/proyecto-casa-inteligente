@@ -1,10 +1,10 @@
 # Casa inteligente con Arduino UNO
 
 Interfaz de escritorio Python (Tkinter) para el proyecto de casa inteligente.
-La etapa actual controla el LED integrado y una ventana con servomotor,
-administra la conexión USB serial y permite consultar o ajustar un reloj RTC
-DS3231. La comunicación utiliza pySerial a 9600 baudios y cada acción manual se
-conserva en `reporte.txt`.
+La etapa actual controla el LED integrado, una ventana con servomotor y una
+puerta con motor DC mediante L298N. También administra la conexión USB serial y
+permite consultar o ajustar un reloj RTC DS3231. La comunicación utiliza
+pySerial a 9600 baudios y cada acción manual se conserva en `reporte.txt`.
 
 El PDF `proyecto2.pdf` también describe etapas posteriores: puerta, ventana,
 DHT11, alarma y bomba de agua. El registro ya está preparado para incorporar
@@ -33,6 +33,14 @@ la posición cerrada de 5°; la posición abierta es 89°. Se recomienda aliment
 el servo con una fuente regulada de 5 V adecuada para su consumo y unir el GND
 de esa fuente con el GND del Arduino. Evite alimentar servos de alto consumo
 directamente desde el pin de 5 V del UNO.
+
+Para el L298N conecte `IN1` a `D3`, `IN2` a `D4`, el motor a `OUT1/OUT2` y
+mantenga habilitado `ENA` mediante el jumper del módulo. Alimente el motor con
+una fuente externa adecuada y conecte su GND con el GND del Arduino; no alimente
+el motor desde un pin del UNO. El movimiento dura 1000 ms por sentido, un cuarto
+de los 4000 ms del ejemplo. Sin encoder ni finales de carrera esta posición es
+una estimación temporal, por lo que `kQuarterTravelMs` debe calibrarse con la
+mecánica real. Al reiniciar, el programa supone que la puerta está cerrada.
 
 ## Ejecutar
 
@@ -77,6 +85,10 @@ El script utiliza `.tools/python/python.exe` si está disponible, o el comando
   queda registrada con la hora del RTC. El movimiento se realiza gradualmente,
   un grado cada 20 ms (aproximadamente 1.7 s entre ambos extremos), sin bloquear
   la comunicación serial.
+- La sección **Puerta · Motor DC L298N** controla apertura y cierre invirtiendo
+  `IN1/IN2`. El motor se detiene automáticamente después de 1000 ms, sin usar
+  `delay()`, y la aplicación espera la confirmación final antes de habilitar otra
+  acción. Ambas órdenes se guardan en `reporte.txt`.
 - Consulta `STATUS` aproximadamente cada segundo para detectar desconexiones
   y cambios de estado. Estas consultas periódicas no saturan el log.
 - Registra puertos probados, esperas, comandos, respuestas, errores y resultados.
@@ -104,9 +116,12 @@ conectadas; desconecte equipos seriales ajenos durante las pruebas.
    aproximadamente con la computadora y la acción debe aparecer en `reporte.txt`.
 7. Pulse **Abrir ventana (89°)** y **Cerrar ventana (5°)**, comprobando ambas
    posiciones y sus entradas correspondientes en `reporte.txt`.
-8. Desconecte USB: debe mostrar error y estado desconocido. Reconecte y espere
+8. Con la puerta inicialmente cerrada, pulse **Abrir puerta** y compruebe que el
+   motor gira durante aproximadamente un segundo y se detiene. Pulse **Cerrar
+   puerta** y confirme el giro inverso durante el mismo tiempo.
+9. Desconecte USB: debe mostrar error y estado desconocido. Reconecte y espere
    la detección automática (cada candidato puede requerir unos cuatro segundos).
-9. Cierre y reabra: el puerto debe quedar disponible.
+10. Cierre y reabra: el puerto debe quedar disponible.
 
 Referencias: [UNO Rev3](https://store.arduino.cc/products/arduino-uno-rev3),
 [enumeración de puertos](https://pyserial.readthedocs.io/en/stable/tools.html),
@@ -115,12 +130,12 @@ Referencias: [UNO Rev3](https://store.arduino.cc/products/arduino-uno-rev3),
 ## Validación realizada
 
 - Firmware compilado para `arduino:avr:uno` con RTClib 2.1.4, Adafruit BusIO
-  1.17.4 y Servo 1.3.0: 8670 bytes de programa y 597 bytes de RAM.
+  1.17.4 y Servo 1.3.0: 9104 bytes de programa y 524 bytes de RAM.
 - El firmware evita enlazar `scanf`, `printf` y `snprintf`: RTClib construye y
   valida la fecha ISO, mientras que la salida usa impresiones numéricas directas.
   El búfer serial se redujo de 48 a 32 bytes.
-- Catorce pruebas aprobadas, incluidas lectura y ajuste del RTC, `RTC OFFLINE`,
-  las dos posiciones del servo, botones y escritura persistente del reporte.
+- Diecisiete pruebas aprobadas, incluidas lectura y ajuste del RTC, `RTC OFFLINE`,
+  servo, control no bloqueante de la puerta, botones y reporte persistente.
 - Ejecutar pruebas: `.\.venv\Scripts\python.exe -m unittest -v`.
 - No se cargó firmware ni se verificó el LED físico: el UNO todavía no estaba
   conectado durante la preparación.

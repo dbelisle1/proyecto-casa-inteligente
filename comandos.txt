@@ -69,5 +69,16 @@ GND -> GND compartido con el Arduino
 El sketch también utiliza la biblioteca oficial "Servo". Si Arduino IDE no la
 encuentra al compilar, instalarla desde el gestor de bibliotecas.
 
+Para el módulo L298N y el motor DC:
+
+IN1 -> D3
+IN2 -> D4
+OUT1/OUT2 -> terminales del motor
+ENA -> jumper de habilitación colocado
+GND de la fuente del motor -> GND del Arduino
+
+Usar una fuente externa adecuada para el motor. El tiempo de recorrido se
+calibra con kQuarterTravelMs en el sketch; su valor inicial es 1000 ms.
+
 Luego cerrar el Monitor Serial y el Serial Plotter de Arduino IDE para dejar
 libre el puerto USB.

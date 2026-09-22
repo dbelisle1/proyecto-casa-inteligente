@@ -103,12 +103,37 @@ class ArduinoWorker(threading.Thread):
             "SERVO STATUS", {"SERVO OPEN 89", "SERVO CLOSED 5"}, verbose=verbose
         )
 
+    def query_door(self, verbose=True):
+        return self.exchange(
+            "DOOR STATUS",
+            {"DOOR OPEN", "DOOR CLOSED", "DOOR MOVING OPEN", "DOOR MOVING CLOSED"},
+            verbose=verbose,
+        )
+
     def servo_for_connection(self):
         try:
             return self.query_servo(verbose=False)
         except (OSError, serial.SerialException) as error:
             self.log(f"No se pudo consultar la posición del servomotor: {error}")
             return None
+
+    def door_for_connection(self):
+        try:
+            return self.query_door(verbose=False)
+        except (OSError, serial.SerialException) as error:
+            self.log(f"No se pudo consultar el estado del motor de la puerta: {error}")
+            return None
+
+    def wait_for_door(self, expected, moving):
+        deadline = time.monotonic() + 3
+        while not self.stop.is_set() and time.monotonic() < deadline:
+            state = self.query_door(verbose=False)
+            if state == expected:
+                return
+            if state != moving:
+                raise serial.SerialException(f"Estado inesperado de la puerta: {state}")
+            self.stop.wait(0.1)
+        raise serial.SerialException("La puerta no confirmó el fin del movimiento.")
 
     def rtc_for_report(self):
         if self.connection is None:
@@ -182,12 +207,19 @@ class ArduinoWorker(threading.Thread):
                 state = self.exchange("STATUS", {"LED 0", "LED 1"})
                 rtc_state = self.rtc_for_report()
                 servo_state = self.servo_for_connection()
+                door_state = self.door_for_connection()
                 self.log(f"Arduino identificado en {port.device}; estado inicial confirmado.")
                 self.remember_port(port.device)
                 self.events.put(
                     (
                         "connected",
-                        (port.device, state == "LED 1", rtc_state, servo_state),
+                        (
+                            port.device,
+                            state == "LED 1",
+                            rtc_state,
+                            servo_state,
+                            door_state,
+                        ),
                     )
                 )
                 return True
@@ -270,6 +302,25 @@ class ArduinoWorker(threading.Thread):
                             self.exchange(command, {expected})
                             self.log(f"Posición confirmada por el Arduino: {expected}")
                             self.events.put(("servo_done", open_window))
+                        elif action == "door":
+                            open_door = bool(value)
+                            report_message = (
+                                "CONTROL MANUAL | Botón Abrir puerta presionado"
+                                if open_door
+                                else "CONTROL MANUAL | Botón Cerrar puerta presionado"
+                            )
+                            rtc_answer = self.rtc_for_report()
+                            command = "DOOR OPEN" if open_door else "DOOR CLOSE"
+                            expected = "DOOR OPEN" if open_door else "DOOR CLOSED"
+                            moving = "DOOR MOVING OPEN" if open_door else "DOOR MOVING CLOSED"
+                            self.log(
+                                f"Acción: {'abrir' if open_door else 'cerrar'} la puerta con el motor DC."
+                            )
+                            response = self.exchange(command, {expected, moving})
+                            if response == moving:
+                                self.wait_for_door(expected, moving)
+                            self.log(f"Movimiento terminado; Arduino confirmó: {expected}")
+                            self.events.put(("door_done", open_door))
                         else:
                             self.log(f"ERROR: acción interna desconocida: {action}")
                     finally:
@@ -288,8 +339,8 @@ class App(tk.Tk):
     def __init__(self, report_path=REPORT_FILE):
         super().__init__()
         self.title("Casa inteligente · Arduino UNO")
-        self.geometry("780x700")
-        self.minsize(640, 560)
+        self.geometry("800x800")
+        self.minsize(680, 620)
         self.report_path = Path(report_path)
         self.events, self.commands = queue.Queue(), queue.Queue()
         self.stop = threading.Event()
@@ -299,6 +350,7 @@ class App(tk.Tk):
         self.busy_action = None
         self.led_on = False
         self.window_open = None
+        self.door_open = None
         self.closing = False
         frame = ttk.Frame(self, padding=20)
         frame.pack(fill="both", expand=True)
@@ -341,8 +393,22 @@ class App(tk.Tk):
             servo_button_row, text="Cerrar ventana (5°)", command=self.close_window, state="disabled"
         )
         self.servo_close_button.pack(side="left", padx=(8, 0))
+        ttk.Separator(frame).pack(fill="x", pady=(4, 12))
+        ttk.Label(frame, text="Puerta · Motor DC L298N", font=("Segoe UI", 12, "bold")).pack(anchor="w")
+        self.door_label = ttk.Label(frame, text="Puerta: posición desconocida")
+        self.door_label.pack(anchor="w", pady=(4, 0))
+        door_button_row = ttk.Frame(frame)
+        door_button_row.pack(anchor="w", pady=10)
+        self.door_open_button = ttk.Button(
+            door_button_row, text="Abrir puerta", command=self.open_door, state="disabled"
+        )
+        self.door_open_button.pack(side="left")
+        self.door_close_button = ttk.Button(
+            door_button_row, text="Cerrar puerta", command=self.close_door, state="disabled"
+        )
+        self.door_close_button.pack(side="left", padx=(8, 0))
         ttk.Label(frame, text="Registro de ejecución y errores").pack(anchor="w")
-        self.log_box = ScrolledText(frame, height=10, state="disabled", wrap="word", font=("Consolas", 10))
+        self.log_box = ScrolledText(frame, height=8, state="disabled", wrap="word", font=("Consolas", 10))
         self.log_box.pack(fill="both", expand=True, pady=(6, 0))
         self.worker = ArduinoWorker(self.events, self.commands, self.stop, rescan=self.rescan)
         self.worker.start()
@@ -375,6 +441,14 @@ class App(tk.Tk):
         servo_button_state = "normal" if self.connected and not self.busy else "disabled"
         self.servo_open_button.configure(state=servo_button_state)
         self.servo_close_button.configure(state=servo_button_state)
+        if self.connected and self.door_open is not None:
+            door_text = "Puerta: ABIERTA" if self.door_open else "Puerta: CERRADA"
+        else:
+            door_text = "Puerta: posición desconocida"
+        self.door_label.configure(text=door_text)
+        door_button_state = "normal" if self.connected and not self.busy else "disabled"
+        self.door_open_button.configure(state=door_button_state)
+        self.door_close_button.configure(state=door_button_state)
 
     def toggle(self):
         if self.connected and not self.busy:
@@ -413,6 +487,20 @@ class App(tk.Tk):
     def close_window(self):
         self.set_window(False)
 
+    def set_door(self, open_door):
+        if self.connected and not self.busy:
+            self.busy, self.busy_action = True, "door"
+            action = "abrir" if open_door else "cerrar"
+            self.append_log(f"Acción: {action} la puerta durante un cuarto de recorrido.")
+            self.commands.put(("door", open_door))
+            self.render()
+
+    def open_door(self):
+        self.set_door(True)
+
+    def close_door(self):
+        self.set_door(False)
+
     def rediscover(self):
         if self.closing:
             return
@@ -438,18 +526,24 @@ class App(tk.Tk):
                 except OSError as error:
                     self.append_log(f"ERROR al escribir {self.report_path.name}: {error}")
             elif kind == "connected":
-                port, self.led_on, rtc_answer, servo_answer = value
+                port, self.led_on, rtc_answer, servo_answer, door_answer = value
                 self.connected, self.busy, self.busy_action = True, False, None
                 self.window_open = (
                     True
                     if servo_answer == "SERVO OPEN 89"
                     else False if servo_answer == "SERVO CLOSED 5" else None
                 )
+                self.door_open = (
+                    True
+                    if door_answer == "DOOR OPEN"
+                    else False if door_answer == "DOOR CLOSED" else None
+                )
                 self.connection_label.configure(text=f"Conectado: Arduino UNO · {port} · 9600 baudios")
                 self.rtc_label.configure(text=f"RTC: {rtc_timestamp(rtc_answer)}")
             elif kind == "disconnected":
                 self.connected, self.busy, self.busy_action = False, False, None
                 self.window_open = None
+                self.door_open = None
                 self.connection_label.configure(text="Sin conexión · búsqueda automática activa")
                 self.rtc_label.configure(text="RTC: estado desconocido")
             elif kind in ("done", "state"):
@@ -462,6 +556,9 @@ class App(tk.Tk):
             elif kind == "servo_done":
                 self.busy, self.busy_action = False, None
                 self.window_open = value
+            elif kind == "door_done":
+                self.busy, self.busy_action = False, None
+                self.door_open = value
             self.render()
         if not self.closing:
             self.after(100, self.process_events)
@@ -474,6 +571,8 @@ class App(tk.Tk):
         self.rtc_read_button.configure(state="disabled")
         self.servo_open_button.configure(state="disabled")
         self.servo_close_button.configure(state="disabled")
+        self.door_open_button.configure(state="disabled")
+        self.door_close_button.configure(state="disabled")
         self.stop.set()
         self.append_log("Cerrando comunicación serial...")
         self.wait_for_worker()

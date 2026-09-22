@@ -18,6 +18,7 @@ class FakePort:
         self.closed = False
         self.led = False
         self.servo_open = False
+        self.door_open = False
         self.rtc_online = True
         self.rtc_value = "2026-09-21 20:30:45"
 
@@ -49,6 +50,14 @@ class FakePort:
             self.answer = b"SERVO CLOSED 5\n"
         elif command == b"SERVO STATUS\n":
             self.answer = b"SERVO OPEN 89\n" if self.servo_open else b"SERVO CLOSED 5\n"
+        elif command == b"DOOR OPEN\n":
+            self.door_open = True
+            self.answer = b"DOOR OPEN\n"
+        elif command == b"DOOR CLOSE\n":
+            self.door_open = False
+            self.answer = b"DOOR CLOSED\n"
+        elif command == b"DOOR STATUS\n":
+            self.answer = b"DOOR OPEN\n" if self.door_open else b"DOOR CLOSED\n"
         else:
             self.answer = replies.get(command, b"LED 1\n" if self.led else b"LED 0\n")
 
@@ -80,7 +89,13 @@ class ProtocolTests(unittest.TestCase):
         self.assertIn(
             (
                 "connected",
-                ("COM4", False, "RTC 2026-09-21 20:30:45", "SERVO CLOSED 5"),
+                (
+                    "COM4",
+                    False,
+                    "RTC 2026-09-21 20:30:45",
+                    "SERVO CLOSED 5",
+                    "DOOR CLOSED",
+                ),
             ),
             events,
         )
@@ -133,6 +148,27 @@ class ProtocolTests(unittest.TestCase):
             "SERVO CLOSED 5",
         )
 
+    def test_door_motor_accepts_open_and_close_commands(self):
+        self.worker.connection = FakePort()
+        self.assertEqual(self.worker.query_door(), "DOOR CLOSED")
+        self.assertEqual(
+            self.worker.exchange("DOOR OPEN", {"DOOR OPEN", "DOOR MOVING OPEN"}),
+            "DOOR OPEN",
+        )
+        self.assertEqual(self.worker.query_door(), "DOOR OPEN")
+        self.assertEqual(
+            self.worker.exchange("DOOR CLOSE", {"DOOR CLOSED", "DOOR MOVING CLOSED"}),
+            "DOOR CLOSED",
+        )
+
+    def test_worker_waits_until_door_finishes_moving(self):
+        with patch.object(
+            self.worker,
+            "query_door",
+            side_effect=["DOOR MOVING OPEN", "DOOR OPEN"],
+        ), patch.object(self.worker.stop, "wait", return_value=False):
+            self.worker.wait_for_door("DOOR OPEN", "DOOR MOVING OPEN")
+
     def test_wrong_firmware_rejected_and_port_closed(self):
         port = FakePort()
         candidate = SimpleNamespace(device="COM9", vid=None, description="Other")
@@ -166,7 +202,10 @@ class ProtocolTests(unittest.TestCase):
             app.withdraw()
             self.assertIn("disabled", app.button.state())
             app.events.put(
-                ("connected", ("COM4", False, "RTC OFFLINE", "SERVO CLOSED 5"))
+                (
+                    "connected",
+                    ("COM4", False, "RTC OFFLINE", "SERVO CLOSED 5", "DOOR CLOSED"),
+                )
             )
             app.process_events()
             self.assertNotIn("disabled", app.button.state())
@@ -174,6 +213,8 @@ class ProtocolTests(unittest.TestCase):
             self.assertNotIn("disabled", app.rtc_read_button.state())
             self.assertNotIn("disabled", app.servo_open_button.state())
             self.assertNotIn("disabled", app.servo_close_button.state())
+            self.assertNotIn("disabled", app.door_open_button.state())
+            self.assertNotIn("disabled", app.door_close_button.state())
             app.toggle()
             self.assertEqual(app.commands.get_nowait(), ("led", True))
             self.assertIn("disabled", app.button.state())
@@ -186,6 +227,7 @@ class ProtocolTests(unittest.TestCase):
             self.assertIn("disabled", app.button.state())
             self.assertEqual(app.led_label.cget("text"), "LED: estado desconocido")
             self.assertEqual(app.servo_label.cget("text"), "Ventana: posición desconocida")
+            self.assertEqual(app.door_label.cget("text"), "Puerta: posición desconocida")
         finally:
             app.destroy()
 
@@ -202,6 +244,7 @@ class ProtocolTests(unittest.TestCase):
                         False,
                         "RTC 2026-09-21 20:30:45",
                         "SERVO CLOSED 5",
+                        "DOOR CLOSED",
                     ),
                 )
             )
@@ -231,6 +274,7 @@ class ProtocolTests(unittest.TestCase):
                         False,
                         "RTC 2026-09-21 20:30:45",
                         "SERVO CLOSED 5",
+                        "DOOR CLOSED",
                     ),
                 )
             )
@@ -246,6 +290,38 @@ class ProtocolTests(unittest.TestCase):
             app.events.put(("servo_done", False))
             app.process_events()
             self.assertEqual(app.servo_label.cget("text"), "Ventana: CERRADA (5°)")
+        finally:
+            app.destroy()
+
+    def test_gui_can_open_and_close_door(self):
+        with patch.object(ArduinoWorker, "start"):
+            app = App()
+        try:
+            app.withdraw()
+            app.events.put(
+                (
+                    "connected",
+                    (
+                        "COM4",
+                        False,
+                        "RTC 2026-09-21 20:30:45",
+                        "SERVO CLOSED 5",
+                        "DOOR CLOSED",
+                    ),
+                )
+            )
+            app.process_events()
+            self.assertEqual(app.door_label.cget("text"), "Puerta: CERRADA")
+            app.open_door()
+            self.assertEqual(app.commands.get_nowait(), ("door", True))
+            app.events.put(("door_done", True))
+            app.process_events()
+            self.assertEqual(app.door_label.cget("text"), "Puerta: ABIERTA")
+            app.close_door()
+            self.assertEqual(app.commands.get_nowait(), ("door", False))
+            app.events.put(("door_done", False))
+            app.process_events()
+            self.assertEqual(app.door_label.cget("text"), "Puerta: CERRADA")
         finally:
             app.destroy()
 
