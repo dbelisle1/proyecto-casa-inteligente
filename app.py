@@ -416,8 +416,8 @@ class App(tk.Tk):
     def __init__(self, report_path=REPORT_FILE):
         super().__init__()
         self.title("Casa inteligente · Arduino UNO")
-        self.geometry("800x800")
-        self.minsize(680, 620)
+        self.geometry("980x650")
+        self.minsize(820, 560)
         self.report_path = Path(report_path)
         self.events, self.commands = queue.Queue(), queue.Queue()
         self.stop = threading.Event()
@@ -432,22 +432,47 @@ class App(tk.Tk):
         self.closing = False
         frame = ttk.Frame(self, padding=20)
         frame.pack(fill="both", expand=True)
-        ttk.Label(frame, text="Control del LED integrado", font=("Segoe UI", 18, "bold")).pack(anchor="w")
+        ttk.Label(frame, text="Panel de control · Arduino UNO", font=("Segoe UI", 18, "bold")).pack(anchor="w")
         self.connection_label = ttk.Label(frame, text="Buscando Arduino UNO por USB...")
         self.connection_label.pack(anchor="w", pady=(8, 16))
-        self.led_label = ttk.Label(frame, text="LED: estado desconocido", font=("Segoe UI", 12))
+
+        control_columns = ttk.Frame(frame)
+        control_columns.pack(fill="x")
+        control_columns.columnconfigure(0, weight=1, uniform="controls")
+        control_columns.columnconfigure(2, weight=1, uniform="controls")
+        self.left_controls = ttk.Frame(control_columns)
+        self.left_controls.grid(row=0, column=0, sticky="nsew", padx=(0, 14))
+        ttk.Separator(control_columns, orient="vertical").grid(
+            row=0, column=1, sticky="ns", padx=4
+        )
+        self.right_controls = ttk.Frame(control_columns)
+        self.right_controls.grid(row=0, column=2, sticky="nsew", padx=(14, 0))
+
+        ttk.Label(
+            self.left_controls,
+            text="LED integrado",
+            font=("Segoe UI", 12, "bold"),
+        ).pack(anchor="w")
+        self.led_label = ttk.Label(
+            self.left_controls, text="LED: estado desconocido", font=("Segoe UI", 12)
+        )
         self.led_label.pack(anchor="w")
-        button_row = ttk.Frame(frame)
+        button_row = ttk.Frame(self.left_controls)
         button_row.pack(anchor="w", pady=12)
         self.button = ttk.Button(button_row, text="Esperando Arduino...", command=self.toggle, state="disabled")
         self.button.pack(side="left")
         self.search_button = ttk.Button(button_row, text="Buscar Arduino de nuevo", command=self.rediscover)
         self.search_button.pack(side="left", padx=(8, 0))
-        ttk.Separator(frame).pack(fill="x", pady=(4, 12))
-        ttk.Label(frame, text="Reloj RTC DS3231", font=("Segoe UI", 12, "bold")).pack(anchor="w")
-        self.rtc_label = ttk.Label(frame, text="RTC: estado desconocido")
+        ttk.Separator(self.left_controls).pack(fill="x", pady=(4, 12))
+
+        ttk.Label(
+            self.right_controls,
+            text="Reloj RTC DS3231",
+            font=("Segoe UI", 12, "bold"),
+        ).pack(anchor="w")
+        self.rtc_label = ttk.Label(self.right_controls, text="RTC: estado desconocido")
         self.rtc_label.pack(anchor="w", pady=(4, 0))
-        rtc_button_row = ttk.Frame(frame)
+        rtc_button_row = ttk.Frame(self.right_controls)
         rtc_button_row.pack(anchor="w", pady=10)
         self.rtc_set_button = ttk.Button(
             rtc_button_row, text="Asignar hora al RTC", command=self.set_rtc_time, state="disabled"
@@ -457,11 +482,16 @@ class App(tk.Tk):
             rtc_button_row, text="Mostrar datos del RTC", command=self.read_rtc, state="disabled"
         )
         self.rtc_read_button.pack(side="left", padx=(8, 0))
-        ttk.Separator(frame).pack(fill="x", pady=(4, 12))
-        ttk.Label(frame, text="Ventana · Servomotor", font=("Segoe UI", 12, "bold")).pack(anchor="w")
-        self.servo_label = ttk.Label(frame, text="Ventana: posición desconocida")
+        ttk.Separator(self.right_controls).pack(fill="x", pady=(4, 12))
+
+        ttk.Label(
+            self.left_controls,
+            text="Ventana · Servomotor",
+            font=("Segoe UI", 12, "bold"),
+        ).pack(anchor="w")
+        self.servo_label = ttk.Label(self.left_controls, text="Ventana: posición desconocida")
         self.servo_label.pack(anchor="w", pady=(4, 0))
-        servo_button_row = ttk.Frame(frame)
+        servo_button_row = ttk.Frame(self.left_controls)
         servo_button_row.pack(anchor="w", pady=10)
         self.servo_open_button = ttk.Button(
             servo_button_row, text="Abrir ventana (89°)", command=self.open_window, state="disabled"
@@ -471,11 +501,16 @@ class App(tk.Tk):
             servo_button_row, text="Cerrar ventana (5°)", command=self.close_window, state="disabled"
         )
         self.servo_close_button.pack(side="left", padx=(8, 0))
-        ttk.Separator(frame).pack(fill="x", pady=(4, 12))
-        ttk.Label(frame, text="Puerta · Motor DC L298N", font=("Segoe UI", 12, "bold")).pack(anchor="w")
-        self.door_label = ttk.Label(frame, text="Puerta: posición desconocida")
+        ttk.Separator(self.left_controls).pack(fill="x", pady=(4, 12))
+
+        ttk.Label(
+            self.left_controls,
+            text="Puerta · Motor DC L298N",
+            font=("Segoe UI", 12, "bold"),
+        ).pack(anchor="w")
+        self.door_label = ttk.Label(self.left_controls, text="Puerta: posición desconocida")
         self.door_label.pack(anchor="w", pady=(4, 0))
-        door_button_row = ttk.Frame(frame)
+        door_button_row = ttk.Frame(self.left_controls)
         door_button_row.pack(anchor="w", pady=10)
         self.door_open_button = ttk.Button(
             door_button_row, text="Abrir puerta", command=self.open_door, state="disabled"
@@ -485,12 +520,18 @@ class App(tk.Tk):
             door_button_row, text="Cerrar puerta", command=self.close_door, state="disabled"
         )
         self.door_close_button.pack(side="left", padx=(8, 0))
-        ttk.Separator(frame).pack(fill="x", pady=(4, 12))
-        ttk.Label(frame, text="Clima · Sensor DHT11", font=("Segoe UI", 12, "bold")).pack(anchor="w")
-        self.dht_label = ttk.Label(frame, text="DHT11: estado desconocido")
+
+        ttk.Label(
+            self.right_controls,
+            text="Clima · Sensor DHT11",
+            font=("Segoe UI", 12, "bold"),
+        ).pack(anchor="w")
+        self.dht_label = ttk.Label(self.right_controls, text="DHT11: estado desconocido")
         self.dht_label.pack(anchor="w", pady=(4, 10))
+
+        ttk.Separator(frame).pack(fill="x", pady=(8, 12))
         ttk.Label(frame, text="Registro de ejecución y errores").pack(anchor="w")
-        self.log_box = ScrolledText(frame, height=6, state="disabled", wrap="word", font=("Consolas", 10))
+        self.log_box = ScrolledText(frame, height=8, state="disabled", wrap="word", font=("Consolas", 10))
         self.log_box.pack(fill="both", expand=True, pady=(6, 0))
         self.worker = ArduinoWorker(self.events, self.commands, self.stop, rescan=self.rescan)
         self.worker.start()
