@@ -9,7 +9,15 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import serial
-from app import ArduinoWorker, App, RTC_OFFLINE, RTC_UNSET, rtc_timestamp
+from app import (
+    ArduinoWorker,
+    App,
+    DHT_OFFLINE,
+    RTC_OFFLINE,
+    RTC_UNSET,
+    dht_values,
+    rtc_timestamp,
+)
 
 
 class FakePort:
@@ -21,6 +29,9 @@ class FakePort:
         self.door_open = False
         self.rtc_online = True
         self.rtc_value = "2026-09-21 20:30:45"
+        self.dht_online = True
+        self.temperature = 24
+        self.humidity = 50
 
     def reset_input_buffer(self):
         self.answer = b""
@@ -58,6 +69,12 @@ class FakePort:
             self.answer = b"DOOR CLOSED\n"
         elif command == b"DOOR STATUS\n":
             self.answer = b"DOOR OPEN\n" if self.door_open else b"DOOR CLOSED\n"
+        elif command == b"DHT GET\n":
+            self.answer = (
+                f"DHT {self.temperature} {self.humidity}\n".encode()
+                if self.dht_online
+                else b"DHT OFFLINE\n"
+            )
         else:
             self.answer = replies.get(command, b"LED 1\n" if self.led else b"LED 0\n")
 
@@ -95,6 +112,7 @@ class ProtocolTests(unittest.TestCase):
                     "RTC 2026-09-21 20:30:45",
                     "SERVO CLOSED 5",
                     "DOOR CLOSED",
+                    "DHT 24 50",
                 ),
             ),
             events,
@@ -161,6 +179,42 @@ class ProtocolTests(unittest.TestCase):
             "DOOR CLOSED",
         )
 
+    def test_dht11_reading_and_offline_state(self):
+        port = FakePort()
+        self.worker.connection = port
+        self.assertEqual(self.worker.query_dht(), "DHT 24 50")
+        self.assertEqual(dht_values("DHT 24 50"), (24, 50))
+        port.dht_online = False
+        self.assertEqual(self.worker.query_dht(), DHT_OFFLINE)
+        self.assertIsNone(dht_values(DHT_OFFLINE))
+
+    def test_dht11_automatic_sample_generates_report_with_rtc_time(self):
+        self.worker.connection = FakePort()
+        self.worker.capture_dht_report()
+        events = list(self.worker.events.queue)
+        self.assertIn(("dht", "DHT 24 50"), events)
+        self.assertIn(
+            (
+                "report",
+                (
+                    "2026-09-21 20:30:45",
+                    "AUTOMÁTICO | DHT11 | Temperatura: 24 °C | Humedad: 50 %",
+                ),
+            ),
+            events,
+        )
+
+    def test_dht11_sample_waits_for_five_second_deadline(self):
+        self.worker.next_dht_report_at = 10
+        with patch("app.time.monotonic", side_effect=[9.9, 10]), patch.object(
+            self.worker, "capture_dht_report"
+        ) as capture:
+            self.worker.maybe_capture_dht_report()
+            capture.assert_not_called()
+            self.worker.maybe_capture_dht_report()
+            capture.assert_called_once_with()
+        self.assertEqual(self.worker.next_dht_report_at, 15)
+
     def test_worker_waits_until_door_finishes_moving(self):
         with patch.object(
             self.worker,
@@ -204,7 +258,14 @@ class ProtocolTests(unittest.TestCase):
             app.events.put(
                 (
                     "connected",
-                    ("COM4", False, "RTC OFFLINE", "SERVO CLOSED 5", "DOOR CLOSED"),
+                    (
+                        "COM4",
+                        False,
+                        "RTC OFFLINE",
+                        "SERVO CLOSED 5",
+                        "DOOR CLOSED",
+                        "DHT OFFLINE",
+                    ),
                 )
             )
             app.process_events()
@@ -228,6 +289,7 @@ class ProtocolTests(unittest.TestCase):
             self.assertEqual(app.led_label.cget("text"), "LED: estado desconocido")
             self.assertEqual(app.servo_label.cget("text"), "Ventana: posición desconocida")
             self.assertEqual(app.door_label.cget("text"), "Puerta: posición desconocida")
+            self.assertEqual(app.dht_label.cget("text"), "DHT11: estado desconocido")
         finally:
             app.destroy()
 
@@ -245,6 +307,7 @@ class ProtocolTests(unittest.TestCase):
                         "RTC 2026-09-21 20:30:45",
                         "SERVO CLOSED 5",
                         "DOOR CLOSED",
+                        "DHT 24 50",
                     ),
                 )
             )
@@ -254,6 +317,10 @@ class ProtocolTests(unittest.TestCase):
             app.events.put(("rtc_done", "RTC 2026-09-21 20:31:00"))
             app.process_events()
             self.assertEqual(app.rtc_label.cget("text"), "RTC: 2026-09-21 20:31:00")
+            self.assertEqual(
+                app.dht_label.cget("text"),
+                "Temperatura: 24 °C · Humedad: 50 %",
+            )
             app.set_rtc_time()
             action, value = app.commands.get_nowait()
             self.assertEqual(action, "rtc_set")
@@ -275,6 +342,7 @@ class ProtocolTests(unittest.TestCase):
                         "RTC 2026-09-21 20:30:45",
                         "SERVO CLOSED 5",
                         "DOOR CLOSED",
+                        "DHT 24 50",
                     ),
                 )
             )
@@ -307,6 +375,7 @@ class ProtocolTests(unittest.TestCase):
                         "RTC 2026-09-21 20:30:45",
                         "SERVO CLOSED 5",
                         "DOOR CLOSED",
+                        "DHT 24 50",
                     ),
                 )
             )

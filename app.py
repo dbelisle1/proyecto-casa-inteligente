@@ -17,6 +17,8 @@ VARIABLES_FILE = Path(__file__).resolve().with_name("variables.json")
 REPORT_FILE = Path(__file__).resolve().with_name("reporte.txt")
 RTC_OFFLINE = "RTC OFFLINE"
 RTC_UNSET = "RTC SIN CONFIGURAR"
+DHT_OFFLINE = "DHT OFFLINE"
+DHT_REPORT_INTERVAL = 5.0
 
 
 def rtc_timestamp(answer):
@@ -36,6 +38,32 @@ def append_report(path, timestamp, message):
         report.write(f"[{timestamp}] {message}\n")
 
 
+def dht_values(answer):
+    """Obtiene temperatura y humedad enteras desde ``DHT <temp> <hum>``."""
+    if answer == DHT_OFFLINE:
+        return None
+    parts = answer.split()
+    if len(parts) != 3 or parts[0] != "DHT":
+        raise ValueError(f"Respuesta DHT11 inválida: {answer!r}")
+    try:
+        return int(parts[1]), int(parts[2])
+    except ValueError as error:
+        raise ValueError(f"Respuesta DHT11 inválida: {answer!r}") from error
+
+
+def dht_status_text(answer):
+    """Convierte la respuesta del sensor en texto para la interfaz."""
+    if answer == DHT_OFFLINE:
+        return "DHT11: OFFLINE"
+    if not answer:
+        return "DHT11: estado desconocido"
+    try:
+        temperature, humidity = dht_values(answer)
+    except ValueError:
+        return "DHT11: estado desconocido"
+    return f"Temperatura: {temperature} °C · Humedad: {humidity} %"
+
+
 class ArduinoWorker(threading.Thread):
     """Único propietario del puerto; nunca modifica widgets desde este hilo."""
 
@@ -45,6 +73,7 @@ class ArduinoWorker(threading.Thread):
         self.variables_path = Path(variables_path)
         self.rescan = rescan or threading.Event()
         self.connection = None
+        self.next_dht_report_at = None
         self.remembered_port = self.load_remembered_port()
 
     def log(self, message):
@@ -110,6 +139,13 @@ class ArduinoWorker(threading.Thread):
             verbose=verbose,
         )
 
+    def query_dht(self, verbose=True):
+        answer = self.exchange(
+            "DHT GET", {DHT_OFFLINE}, accepted_prefixes=("DHT ",), verbose=verbose
+        )
+        dht_values(answer)
+        return answer
+
     def servo_for_connection(self):
         try:
             return self.query_servo(verbose=False)
@@ -123,6 +159,13 @@ class ArduinoWorker(threading.Thread):
         except (OSError, serial.SerialException) as error:
             self.log(f"No se pudo consultar el estado del motor de la puerta: {error}")
             return None
+
+    def dht_for_connection(self):
+        try:
+            return self.query_dht(verbose=False)
+        except (OSError, serial.SerialException, ValueError) as error:
+            self.log(f"No se pudo consultar el sensor DHT11: {error}")
+            return DHT_OFFLINE
 
     def wait_for_door(self, expected, moving):
         deadline = time.monotonic() + 3
@@ -148,6 +191,35 @@ class ArduinoWorker(threading.Thread):
         answer = rtc_answer if rtc_answer is not None else self.rtc_for_report()
         self.events.put(("report", (rtc_timestamp(answer), message)))
 
+    def capture_dht_report(self):
+        """Lee el DHT11 y genera el evento que termina en reporte.txt."""
+        try:
+            answer = self.query_dht(verbose=False)
+        except (OSError, serial.SerialException, ValueError) as error:
+            answer = DHT_OFFLINE
+            self.log(f"No se pudo leer el sensor DHT11: {error}")
+
+        self.events.put(("dht", answer))
+        values = dht_values(answer)
+        if values is None:
+            message = "AUTOMÁTICO | DHT11 OFFLINE"
+        else:
+            temperature, humidity = values
+            message = (
+                f"AUTOMÁTICO | DHT11 | Temperatura: {temperature} °C | "
+                f"Humedad: {humidity} %"
+            )
+        self.report(message)
+
+    def maybe_capture_dht_report(self):
+        if self.next_dht_report_at is None:
+            return
+        now = time.monotonic()
+        if now < self.next_dht_report_at:
+            return
+        self.next_dht_report_at = now + DHT_REPORT_INTERVAL
+        self.capture_dht_report()
+
     def disconnect(self):
         if self.connection is not None:
             try:
@@ -155,6 +227,7 @@ class ArduinoWorker(threading.Thread):
             except (OSError, serial.SerialException) as error:
                 self.log(f"ERROR al cerrar el puerto: {error}")
             self.connection = None
+        self.next_dht_report_at = None
         self.events.put(("disconnected", None))
 
     def handle_rescan_request(self):
@@ -208,8 +281,10 @@ class ArduinoWorker(threading.Thread):
                 rtc_state = self.rtc_for_report()
                 servo_state = self.servo_for_connection()
                 door_state = self.door_for_connection()
+                dht_state = self.dht_for_connection()
                 self.log(f"Arduino identificado en {port.device}; estado inicial confirmado.")
                 self.remember_port(port.device)
+                self.next_dht_report_at = time.monotonic() + DHT_REPORT_INTERVAL
                 self.events.put(
                     (
                         "connected",
@@ -219,6 +294,7 @@ class ArduinoWorker(threading.Thread):
                             rtc_state,
                             servo_state,
                             door_state,
+                            dht_state,
                         ),
                     )
                 )
@@ -244,6 +320,7 @@ class ArduinoWorker(threading.Thread):
                         if not self.discover():
                             self.wait_before_retry(5)
                             continue
+                    self.maybe_capture_dht_report()
                     try:
                         action, value = self.commands.get(timeout=1)
                     except queue.Empty:
@@ -351,6 +428,7 @@ class App(tk.Tk):
         self.led_on = False
         self.window_open = None
         self.door_open = None
+        self.dht_answer = None
         self.closing = False
         frame = ttk.Frame(self, padding=20)
         frame.pack(fill="both", expand=True)
@@ -407,8 +485,12 @@ class App(tk.Tk):
             door_button_row, text="Cerrar puerta", command=self.close_door, state="disabled"
         )
         self.door_close_button.pack(side="left", padx=(8, 0))
+        ttk.Separator(frame).pack(fill="x", pady=(4, 12))
+        ttk.Label(frame, text="Clima · Sensor DHT11", font=("Segoe UI", 12, "bold")).pack(anchor="w")
+        self.dht_label = ttk.Label(frame, text="DHT11: estado desconocido")
+        self.dht_label.pack(anchor="w", pady=(4, 10))
         ttk.Label(frame, text="Registro de ejecución y errores").pack(anchor="w")
-        self.log_box = ScrolledText(frame, height=8, state="disabled", wrap="word", font=("Consolas", 10))
+        self.log_box = ScrolledText(frame, height=6, state="disabled", wrap="word", font=("Consolas", 10))
         self.log_box.pack(fill="both", expand=True, pady=(6, 0))
         self.worker = ArduinoWorker(self.events, self.commands, self.stop, rescan=self.rescan)
         self.worker.start()
@@ -449,6 +531,10 @@ class App(tk.Tk):
         door_button_state = "normal" if self.connected and not self.busy else "disabled"
         self.door_open_button.configure(state=door_button_state)
         self.door_close_button.configure(state=door_button_state)
+        self.dht_label.configure(
+            text=dht_status_text(self.dht_answer) if self.connected
+            else "DHT11: estado desconocido"
+        )
 
     def toggle(self):
         if self.connected and not self.busy:
@@ -526,7 +612,7 @@ class App(tk.Tk):
                 except OSError as error:
                     self.append_log(f"ERROR al escribir {self.report_path.name}: {error}")
             elif kind == "connected":
-                port, self.led_on, rtc_answer, servo_answer, door_answer = value
+                port, self.led_on, rtc_answer, servo_answer, door_answer, self.dht_answer = value
                 self.connected, self.busy, self.busy_action = True, False, None
                 self.window_open = (
                     True
@@ -544,6 +630,7 @@ class App(tk.Tk):
                 self.connected, self.busy, self.busy_action = False, False, None
                 self.window_open = None
                 self.door_open = None
+                self.dht_answer = None
                 self.connection_label.configure(text="Sin conexión · búsqueda automática activa")
                 self.rtc_label.configure(text="RTC: estado desconocido")
             elif kind in ("done", "state"):
@@ -559,6 +646,8 @@ class App(tk.Tk):
             elif kind == "door_done":
                 self.busy, self.busy_action = False, None
                 self.door_open = value
+            elif kind == "dht":
+                self.dht_answer = value
             self.render()
         if not self.closing:
             self.after(100, self.process_events)

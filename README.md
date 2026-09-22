@@ -3,8 +3,9 @@
 Interfaz de escritorio Python (Tkinter) para el proyecto de casa inteligente.
 La etapa actual controla el LED integrado, una ventana con servomotor y una
 puerta con motor DC mediante L298N. También administra la conexión USB serial y
-permite consultar o ajustar un reloj RTC DS3231. La comunicación utiliza
-pySerial a 9600 baudios y cada acción manual se conserva en `reporte.txt`.
+permite consultar o ajustar un reloj RTC DS3231 y registra las mediciones de un
+sensor DHT11. La comunicación utiliza pySerial a 9600 baudios; las acciones
+manuales y las mediciones automáticas se conservan en `reporte.txt`.
 
 El PDF `proyecto2.pdf` también describe etapas posteriores: puerta, ventana,
 DHT11, alarma y bomba de agua. El registro ya está preparado para incorporar
@@ -15,7 +16,8 @@ los eventos automáticos de esas funciones.
 1. Conecte el Arduino UNO con un cable USB de datos.
 2. Abra `arduino/ControlLedUno/ControlLedUno.ino` en Arduino IDE.
 3. Seleccione **Arduino AVR Boards > Arduino Uno** y el puerto de su placa.
-4. En el gestor de bibliotecas instale **RTClib by Adafruit**.
+4. En el gestor de bibliotecas instale **RTClib by Adafruit**, **DHT sensor
+   library by Adafruit**, **Adafruit Unified Sensor** y **Servo**.
 5. Suba el sketch. Esto reemplaza el programa anterior de la placa.
 6. Cierre el Monitor Serial y el Serial Plotter para liberar el puerto.
 
@@ -41,6 +43,11 @@ el motor desde un pin del UNO. El movimiento dura 1000 ms por sentido, un cuarto
 de los 4000 ms del ejemplo. Sin encoder ni finales de carrera esta posición es
 una estimación temporal, por lo que `kQuarterTravelMs` debe calibrarse con la
 mecánica real. Al reiniciar, el programa supone que la puerta está cerrada.
+
+Para el DHT11 conecte el pin de datos a `D5`, `VCC` a `5V` y `GND` a `GND`.
+Si utiliza el sensor suelto en lugar de un módulo, coloque una resistencia
+pull-up de 10 kΩ entre DATA y 5 V. La aplicación pide una medición cada cinco
+segundos; no es necesario pulsar un botón.
 
 ## Ejecutar
 
@@ -89,6 +96,12 @@ El script utiliza `.tools/python/python.exe` si está disponible, o el comando
   `IN1/IN2`. El motor se detiene automáticamente después de 1000 ms, sin usar
   `delay()`, y la aplicación espera la confirmación final antes de habilitar otra
   acción. Ambas órdenes se guardan en `reporte.txt`.
+- La sección **Clima · Sensor DHT11** muestra la última temperatura y humedad.
+  Cada cinco segundos agrega a `reporte.txt` una línea `AUTOMÁTICO | DHT11`
+  con ambos valores y la hora del DS3231. Si la lectura falla, registra y muestra
+  `DHT11 OFFLINE`; las demás funciones continúan disponibles. El firmware pausa
+  brevemente los pulsos del servo durante la lectura y los reanuda en el mismo
+  ángulo, porque la biblioteca DHT necesita suspender interrupciones para medir.
 - Consulta `STATUS` aproximadamente cada segundo para detectar desconexiones
   y cambios de estado. Estas consultas periódicas no saturan el log.
 - Registra puertos probados, esperas, comandos, respuestas, errores y resultados.
@@ -119,9 +132,12 @@ conectadas; desconecte equipos seriales ajenos durante las pruebas.
 8. Con la puerta inicialmente cerrada, pulse **Abrir puerta** y compruebe que el
    motor gira durante aproximadamente un segundo y se detiene. Pulse **Cerrar
    puerta** y confirme el giro inverso durante el mismo tiempo.
-9. Desconecte USB: debe mostrar error y estado desconocido. Reconecte y espere
+9. Conecte el DHT11 y espere al menos cinco segundos. Compruebe los valores en
+   la sección **Clima** y una nueva línea automática en `reporte.txt`. Desconecte
+   DATA para verificar que se muestre y registre `DHT11 OFFLINE`.
+10. Desconecte USB: debe mostrar error y estado desconocido. Reconecte y espere
    la detección automática (cada candidato puede requerir unos cuatro segundos).
-10. Cierre y reabra: el puerto debe quedar disponible.
+11. Cierre y reabra: el puerto debe quedar disponible.
 
 Referencias: [UNO Rev3](https://store.arduino.cc/products/arduino-uno-rev3),
 [enumeración de puertos](https://pyserial.readthedocs.io/en/stable/tools.html),
@@ -130,12 +146,14 @@ Referencias: [UNO Rev3](https://store.arduino.cc/products/arduino-uno-rev3),
 ## Validación realizada
 
 - Firmware compilado para `arduino:avr:uno` con RTClib 2.1.4, Adafruit BusIO
-  1.17.4 y Servo 1.3.0: 9104 bytes de programa y 524 bytes de RAM.
+  1.17.4, Servo 1.3.0, DHT sensor library 1.4.7 y Adafruit Unified Sensor
+  1.1.15: 11710 bytes de programa y 543 bytes de RAM.
 - El firmware evita enlazar `scanf`, `printf` y `snprintf`: RTClib construye y
   valida la fecha ISO, mientras que la salida usa impresiones numéricas directas.
   El búfer serial se redujo de 48 a 32 bytes.
-- Diecisiete pruebas aprobadas, incluidas lectura y ajuste del RTC, `RTC OFFLINE`,
-  servo, control no bloqueante de la puerta, botones y reporte persistente.
+- Veinte pruebas aprobadas, incluidas lectura y ajuste del RTC, `RTC OFFLINE`,
+  servo, control no bloqueante de la puerta, DHT11, intervalo automático de
+  cinco segundos, botones y reporte persistente.
 - Ejecutar pruebas: `.\.venv\Scripts\python.exe -m unittest -v`.
 - No se cargó firmware ni se verificó el LED físico: el UNO todavía no estaba
   conectado durante la preparación.

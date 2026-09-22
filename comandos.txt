@@ -80,5 +80,15 @@ GND de la fuente del motor -> GND del Arduino
 Usar una fuente externa adecuada para el motor. El tiempo de recorrido se
 calibra con kQuarterTravelMs en el sketch; su valor inicial es 1000 ms.
 
+Para el sensor DHT11 (requiere "DHT sensor library by Adafruit" y
+"Adafruit Unified Sensor"):
+
+DATA -> D5
+VCC -> 5V
+GND -> GND
+
+Si se usa el sensor DHT11 suelto y no un módulo, conectar una resistencia
+pull-up de 10 kΩ entre DATA y 5V.
+
 Luego cerrar el Monitor Serial y el Serial Plotter de Arduino IDE para dejar
 libre el puerto USB.

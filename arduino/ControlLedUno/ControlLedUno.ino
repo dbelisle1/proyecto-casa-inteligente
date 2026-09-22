@@ -1,6 +1,8 @@
 // Placa objetivo: Arduino UNO (ATmega328P). Protocolo ASCII a 9600 baudios.
 // DS3231 por I2C: SDA -> A4, SCL -> A5, además de VCC y GND.
+// DHT11: DATA -> D5, además de VCC y GND.
 #include <Arduino.h>
+#include <DHT.h>
 #include <RTClib.h>
 #include <Servo.h>
 #include <Wire.h>
@@ -61,6 +63,15 @@ void update() {
 void printState() {
   Serial.println(targetAngle == kOpenAngle ? F("SERVO OPEN 89")
                                            : F("SERVO CLOSED 5"));
+}
+
+void pausePulses() {
+  motor.detach();
+}
+
+void resumePulses() {
+  motor.attach(kSignalPin);
+  motor.write(currentAngle);
 }
 }  // namespace WindowServo
 
@@ -143,6 +154,35 @@ void update() {
   state = state == OPENING ? OPEN : CLOSED;
 }
 }  // namespace DoorMotor
+
+namespace ClimateSensor {
+constexpr byte kDataPin = 5;
+DHT sensor(kDataPin, DHT11);
+
+void begin() {
+  sensor.begin();
+}
+
+void printReading() {
+  // La librería DHT desactiva interrupciones durante su lectura. Pausar el
+  // pulso del servo evita alargar un pulso y producir un movimiento espurio.
+  WindowServo::pausePulses();
+  const float humidity = sensor.readHumidity();
+  const float temperature = sensor.readTemperature();
+  WindowServo::resumePulses();
+  if (isnan(humidity) || isnan(temperature)) {
+    Serial.println(F("DHT OFFLINE"));
+    return;
+  }
+
+  // El DHT11 entrega resolución entera. Evitar imprimir float ahorra memoria
+  // de programa en el ATmega328P y simplifica el protocolo serial.
+  Serial.print(F("DHT "));
+  Serial.print(static_cast<int>(temperature));
+  Serial.write(' ');
+  Serial.println(static_cast<int>(humidity));
+}
+}  // namespace ClimateSensor
 
 namespace ClockModule {
 constexpr byte kDs3231Address = 0x68;
@@ -260,6 +300,8 @@ void execute(const char *input) {
     DoorMotor::close();
   } else if (strcmp_P(input, PSTR("DOOR STATUS")) == 0) {
     DoorMotor::printState();
+  } else if (strcmp_P(input, PSTR("DHT GET")) == 0) {
+    ClimateSensor::printReading();
   } else {
     Serial.println(F("ERR UNKNOWN_COMMAND"));
   }
@@ -287,6 +329,7 @@ void setup() {
   BuiltInLed::begin();
   WindowServo::begin();
   DoorMotor::begin();
+  ClimateSensor::begin();
   ClockModule::begin();
 }
 
