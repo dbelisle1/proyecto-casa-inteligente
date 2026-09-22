@@ -90,5 +90,17 @@ GND -> GND
 Si se usa el sensor DHT11 suelto y no un módulo, conectar una resistencia
 pull-up de 10 kΩ entre DATA y 5V.
 
+Para el sistema de alarma:
+
+Señal o SIG del buzzer -> D6
+OUT del sensor PIR -> D7
+VCC -> voltaje indicado por cada módulo (normalmente 5V para el PIR)
+GND -> GND compartido con el Arduino
+
+El firmware usa tone() con 440 y 523 Hz, pensado para un buzzer pasivo. Si el
+buzzer consume más corriente que la permitida por un pin del Arduino, usar un
+transistor o un módulo buzzer con entrada de señal. Cada detección produce cinco
+segundos de sonido; desactivar la alarma interrumpe el buzzer inmediatamente.
+
 Luego cerrar el Monitor Serial y el Serial Plotter de Arduino IDE para dejar
 libre el puerto USB.

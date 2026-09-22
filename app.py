@@ -19,6 +19,9 @@ RTC_OFFLINE = "RTC OFFLINE"
 RTC_UNSET = "RTC SIN CONFIGURAR"
 DHT_OFFLINE = "DHT OFFLINE"
 DHT_REPORT_INTERVAL = 5.0
+ALARM_POLL_INTERVAL = 0.25
+HEARTBEAT_INTERVAL = 1.0
+WORKER_TICK_INTERVAL = 0.1
 
 
 def rtc_timestamp(answer):
@@ -64,6 +67,23 @@ def dht_status_text(answer):
     return f"Temperatura: {temperature} °C · Humedad: {humidity} %"
 
 
+def alarm_values(answer):
+    """Interpreta ``ALARM <estado> MOTION <0|1> EVENT <0|1>``."""
+    parts = answer.split()
+    valid = (
+        len(parts) == 6
+        and parts[0] == "ALARM"
+        and parts[1] in ("ARMED", "DISARMED")
+        and parts[2] == "MOTION"
+        and parts[3] in ("0", "1")
+        and parts[4] == "EVENT"
+        and parts[5] in ("0", "1")
+    )
+    if not valid:
+        raise ValueError(f"Respuesta de alarma inválida: {answer!r}")
+    return parts[1] == "ARMED", parts[3] == "1", parts[5] == "1"
+
+
 class ArduinoWorker(threading.Thread):
     """Único propietario del puerto; nunca modifica widgets desde este hilo."""
 
@@ -74,6 +94,8 @@ class ArduinoWorker(threading.Thread):
         self.rescan = rescan or threading.Event()
         self.connection = None
         self.next_dht_report_at = None
+        self.next_alarm_poll_at = None
+        self.next_heartbeat_at = None
         self.remembered_port = self.load_remembered_port()
 
     def log(self, message):
@@ -146,6 +168,16 @@ class ArduinoWorker(threading.Thread):
         dht_values(answer)
         return answer
 
+    def query_alarm(self, verbose=True):
+        answer = self.exchange(
+            "ALARM STATUS", accepted_prefixes=("ALARM ",), verbose=verbose
+        )
+        try:
+            alarm_values(answer)
+        except ValueError as error:
+            raise serial.SerialException(str(error)) from error
+        return answer
+
     def servo_for_connection(self):
         try:
             return self.query_servo(verbose=False)
@@ -166,6 +198,13 @@ class ArduinoWorker(threading.Thread):
         except (OSError, serial.SerialException, ValueError) as error:
             self.log(f"No se pudo consultar el sensor DHT11: {error}")
             return DHT_OFFLINE
+
+    def alarm_for_connection(self):
+        try:
+            return self.query_alarm(verbose=False)
+        except (OSError, serial.SerialException) as error:
+            self.log(f"No se pudo consultar el sistema de alarma: {error}")
+            return None
 
     def wait_for_door(self, expected, moving):
         deadline = time.monotonic() + 3
@@ -220,6 +259,37 @@ class ArduinoWorker(threading.Thread):
         self.next_dht_report_at = now + DHT_REPORT_INTERVAL
         self.capture_dht_report()
 
+    def publish_alarm_state(self, answer):
+        try:
+            armed, motion, event_pending = alarm_values(answer)
+        except ValueError as error:
+            raise serial.SerialException(str(error)) from error
+        self.events.put(("alarm", (armed, motion)))
+        if event_pending:
+            self.log("ALARMA: el sensor PIR detectó movimiento; buzzer activado.")
+            self.report(
+                "AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado"
+            )
+
+    def maybe_poll_alarm(self):
+        if self.next_alarm_poll_at is None:
+            return
+        now = time.monotonic()
+        if now < self.next_alarm_poll_at:
+            return
+        self.next_alarm_poll_at = now + ALARM_POLL_INTERVAL
+        self.publish_alarm_state(self.query_alarm(verbose=False))
+
+    def maybe_send_heartbeat(self):
+        if self.next_heartbeat_at is None:
+            return
+        now = time.monotonic()
+        if now < self.next_heartbeat_at:
+            return
+        self.next_heartbeat_at = now + HEARTBEAT_INTERVAL
+        state = self.exchange("STATUS", {"LED 0", "LED 1"}, verbose=False)
+        self.events.put(("state", state == "LED 1"))
+
     def disconnect(self):
         if self.connection is not None:
             try:
@@ -228,6 +298,8 @@ class ArduinoWorker(threading.Thread):
                 self.log(f"ERROR al cerrar el puerto: {error}")
             self.connection = None
         self.next_dht_report_at = None
+        self.next_alarm_poll_at = None
+        self.next_heartbeat_at = None
         self.events.put(("disconnected", None))
 
     def handle_rescan_request(self):
@@ -282,9 +354,13 @@ class ArduinoWorker(threading.Thread):
                 servo_state = self.servo_for_connection()
                 door_state = self.door_for_connection()
                 dht_state = self.dht_for_connection()
+                alarm_state = self.alarm_for_connection()
                 self.log(f"Arduino identificado en {port.device}; estado inicial confirmado.")
                 self.remember_port(port.device)
-                self.next_dht_report_at = time.monotonic() + DHT_REPORT_INTERVAL
+                now = time.monotonic()
+                self.next_dht_report_at = now + DHT_REPORT_INTERVAL
+                self.next_alarm_poll_at = now + ALARM_POLL_INTERVAL
+                self.next_heartbeat_at = now + HEARTBEAT_INTERVAL
                 self.events.put(
                     (
                         "connected",
@@ -295,6 +371,7 @@ class ArduinoWorker(threading.Thread):
                             servo_state,
                             door_state,
                             dht_state,
+                            alarm_state,
                         ),
                     )
                 )
@@ -321,11 +398,11 @@ class ArduinoWorker(threading.Thread):
                             self.wait_before_retry(5)
                             continue
                     self.maybe_capture_dht_report()
+                    self.maybe_poll_alarm()
+                    self.maybe_send_heartbeat()
                     try:
-                        action, value = self.commands.get(timeout=1)
+                        action, value = self.commands.get(timeout=WORKER_TICK_INTERVAL)
                     except queue.Empty:
-                        state = self.exchange("STATUS", {"LED 0", "LED 1"}, verbose=False)
-                        self.events.put(("state", state == "LED 1"))
                         continue
                     rtc_answer = None
                     report_message = None
@@ -398,6 +475,28 @@ class ArduinoWorker(threading.Thread):
                                 self.wait_for_door(expected, moving)
                             self.log(f"Movimiento terminado; Arduino confirmó: {expected}")
                             self.events.put(("door_done", open_door))
+                        elif action == "alarm":
+                            arm = bool(value)
+                            report_message = (
+                                "CONTROL MANUAL | Botón Activar alarma presionado"
+                                if arm
+                                else "CONTROL MANUAL | Botón Desactivar alarma presionado"
+                            )
+                            rtc_answer = self.rtc_for_report()
+                            command = "ALARM ON" if arm else "ALARM OFF"
+                            self.log(
+                                f"Acción: {'activar' if arm else 'desactivar'} la alarma PIR."
+                            )
+                            answer = self.exchange(
+                                command, accepted_prefixes=("ALARM ",)
+                            )
+                            self.publish_alarm_state(answer)
+                            self.log(
+                                "Alarma activada; el PIR vigila movimiento."
+                                if arm
+                                else "Alarma desactivada; buzzer apagado."
+                            )
+                            self.events.put(("alarm_done", None))
                         else:
                             self.log(f"ERROR: acción interna desconocida: {action}")
                     finally:
@@ -429,6 +528,8 @@ class App(tk.Tk):
         self.window_open = None
         self.door_open = None
         self.dht_answer = None
+        self.alarm_armed = None
+        self.pir_motion = None
         self.closing = False
         frame = ttk.Frame(self, padding=20)
         frame.pack(fill="both", expand=True)
@@ -529,6 +630,33 @@ class App(tk.Tk):
         self.dht_label = ttk.Label(self.right_controls, text="DHT11: estado desconocido")
         self.dht_label.pack(anchor="w", pady=(4, 10))
 
+        ttk.Separator(self.right_controls).pack(fill="x", pady=(4, 12))
+        ttk.Label(
+            self.right_controls,
+            text="Seguridad · PIR y buzzer",
+            font=("Segoe UI", 12, "bold"),
+        ).pack(anchor="w")
+        self.alarm_label = ttk.Label(self.right_controls, text="Alarma: estado desconocido")
+        self.alarm_label.pack(anchor="w", pady=(4, 0))
+        self.pir_label = ttk.Label(self.right_controls, text="PIR: estado desconocido")
+        self.pir_label.pack(anchor="w", pady=(2, 0))
+        alarm_button_row = ttk.Frame(self.right_controls)
+        alarm_button_row.pack(anchor="w", pady=10)
+        self.alarm_on_button = ttk.Button(
+            alarm_button_row,
+            text="Activar alarma",
+            command=self.activate_alarm,
+            state="disabled",
+        )
+        self.alarm_on_button.pack(side="left")
+        self.alarm_off_button = ttk.Button(
+            alarm_button_row,
+            text="Desactivar alarma",
+            command=self.deactivate_alarm,
+            state="disabled",
+        )
+        self.alarm_off_button.pack(side="left", padx=(8, 0))
+
         ttk.Separator(frame).pack(fill="x", pady=(8, 12))
         ttk.Label(frame, text="Registro de ejecución y errores").pack(anchor="w")
         self.log_box = ScrolledText(frame, height=8, state="disabled", wrap="word", font=("Consolas", 10))
@@ -575,6 +703,33 @@ class App(tk.Tk):
         self.dht_label.configure(
             text=dht_status_text(self.dht_answer) if self.connected
             else "DHT11: estado desconocido"
+        )
+        if self.connected and self.alarm_armed is not None:
+            self.alarm_label.configure(
+                text="Alarma: ACTIVADA" if self.alarm_armed else "Alarma: DESACTIVADA"
+            )
+            self.pir_label.configure(
+                text="PIR: MOVIMIENTO DETECTADO"
+                if self.pir_motion
+                else "PIR: sin movimiento"
+            )
+        else:
+            self.alarm_label.configure(text="Alarma: estado desconocido")
+            self.pir_label.configure(text="PIR: estado desconocido")
+        alarm_controls_enabled = self.connected and not self.busy
+        self.alarm_on_button.configure(
+            state=(
+                "normal"
+                if alarm_controls_enabled and self.alarm_armed is not True
+                else "disabled"
+            )
+        )
+        self.alarm_off_button.configure(
+            state=(
+                "normal"
+                if alarm_controls_enabled and self.alarm_armed is not False
+                else "disabled"
+            )
         )
 
     def toggle(self):
@@ -628,6 +783,20 @@ class App(tk.Tk):
     def close_door(self):
         self.set_door(False)
 
+    def set_alarm(self, armed):
+        if self.connected and not self.busy:
+            self.busy, self.busy_action = True, "alarm"
+            action = "activar" if armed else "desactivar"
+            self.append_log(f"Acción: {action} el sistema de alarma PIR.")
+            self.commands.put(("alarm", armed))
+            self.render()
+
+    def activate_alarm(self):
+        self.set_alarm(True)
+
+    def deactivate_alarm(self):
+        self.set_alarm(False)
+
     def rediscover(self):
         if self.closing:
             return
@@ -653,7 +822,15 @@ class App(tk.Tk):
                 except OSError as error:
                     self.append_log(f"ERROR al escribir {self.report_path.name}: {error}")
             elif kind == "connected":
-                port, self.led_on, rtc_answer, servo_answer, door_answer, self.dht_answer = value
+                (
+                    port,
+                    self.led_on,
+                    rtc_answer,
+                    servo_answer,
+                    door_answer,
+                    self.dht_answer,
+                    alarm_answer,
+                ) = value
                 self.connected, self.busy, self.busy_action = True, False, None
                 self.window_open = (
                     True
@@ -665,6 +842,10 @@ class App(tk.Tk):
                     if door_answer == "DOOR OPEN"
                     else False if door_answer == "DOOR CLOSED" else None
                 )
+                if alarm_answer is None:
+                    self.alarm_armed, self.pir_motion = None, None
+                else:
+                    self.alarm_armed, self.pir_motion, _ = alarm_values(alarm_answer)
                 self.connection_label.configure(text=f"Conectado: Arduino UNO · {port} · 9600 baudios")
                 self.rtc_label.configure(text=f"RTC: {rtc_timestamp(rtc_answer)}")
             elif kind == "disconnected":
@@ -672,6 +853,8 @@ class App(tk.Tk):
                 self.window_open = None
                 self.door_open = None
                 self.dht_answer = None
+                self.alarm_armed = None
+                self.pir_motion = None
                 self.connection_label.configure(text="Sin conexión · búsqueda automática activa")
                 self.rtc_label.configure(text="RTC: estado desconocido")
             elif kind in ("done", "state"):
@@ -689,6 +872,10 @@ class App(tk.Tk):
                 self.door_open = value
             elif kind == "dht":
                 self.dht_answer = value
+            elif kind == "alarm":
+                self.alarm_armed, self.pir_motion = value
+            elif kind == "alarm_done":
+                self.busy, self.busy_action = False, None
             self.render()
         if not self.closing:
             self.after(100, self.process_events)
@@ -703,6 +890,8 @@ class App(tk.Tk):
         self.servo_close_button.configure(state="disabled")
         self.door_open_button.configure(state="disabled")
         self.door_close_button.configure(state="disabled")
+        self.alarm_on_button.configure(state="disabled")
+        self.alarm_off_button.configure(state="disabled")
         self.stop.set()
         self.append_log("Cerrando comunicación serial...")
         self.wait_for_worker()

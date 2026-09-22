@@ -4,12 +4,13 @@ Interfaz de escritorio Python (Tkinter) para el proyecto de casa inteligente.
 La etapa actual controla el LED integrado, una ventana con servomotor y una
 puerta con motor DC mediante L298N. También administra la conexión USB serial y
 permite consultar o ajustar un reloj RTC DS3231 y registra las mediciones de un
-sensor DHT11. La comunicación utiliza pySerial a 9600 baudios; las acciones
-manuales y las mediciones automáticas se conservan en `reporte.txt`.
+sensor DHT11. También incorpora una alarma con sensor PIR y buzzer. La
+comunicación utiliza pySerial a 9600 baudios; las acciones manuales y las
+mediciones o detecciones automáticas se conservan en `reporte.txt`.
 
-El PDF `proyecto2.pdf` también describe etapas posteriores: puerta, ventana,
-DHT11, alarma y bomba de agua. El registro ya está preparado para incorporar
-los eventos automáticos de esas funciones.
+El PDF `proyecto2.pdf` también describe como etapas posteriores el encendido
+automático mediante LDR y la bomba de agua. El registro ya está preparado para
+incorporar los eventos automáticos de esas funciones.
 
 ## Preparar la placa
 
@@ -20,6 +21,31 @@ los eventos automáticos de esas funciones.
    library by Adafruit**, **Adafruit Unified Sensor** y **Servo**.
 5. Suba el sketch. Esto reemplaza el programa anterior de la placa.
 6. Cierre el Monitor Serial y el Serial Plotter para liberar el puerto.
+
+## Mapa de conexiones del Arduino UNO
+
+| Componente | Terminal del componente | Puerto del Arduino UNO | Función |
+|---|---|---|---|
+| Comunicación con la computadora | USB | Conector USB (`D0/RX` y `D1/TX` quedan reservados internamente) | Protocolo serial a 9600 baudios |
+| LED integrado | LED `L` de la placa | `D13` / `LED_BUILTIN` | Encendido y apagado manual |
+| Servomotor de la ventana | Señal | `D2` | Posiciones cerrada de 5° y abierta de 89° |
+| Puente H L298N | `IN1` | `D3` | Giro del motor de la puerta en un sentido |
+| Puente H L298N | `IN2` | `D4` | Giro del motor de la puerta en sentido inverso |
+| Sensor DHT11 | `DATA` | `D5` | Lectura de temperatura y humedad |
+| Buzzer pasivo o módulo buzzer | Señal / `SIG` | `D6` | Alarma sonora de 440/523 Hz |
+| Sensor PIR | Salida / `OUT` | `D7` | Detección de movimiento o intrusos |
+| Reloj DS3231 | `SDA` | `A4` / `SDA` | Datos del bus I2C |
+| Reloj DS3231 | `SCL` | `A5` / `SCL` | Reloj del bus I2C |
+
+Todos los módulos deben compartir `GND` con el Arduino. El DS3231, el módulo
+DHT11 y los PIR comunes para Arduino se conectan también a `5V`; compruebe de
+todos modos la especificación impresa en cada módulo. El servomotor y el motor
+DC deben usar las fuentes adecuadas para su consumo, siempre uniendo el negativo
+de esas fuentes con `GND` del Arduino. El motor DC se conecta a `OUT1/OUT2` del
+L298N, no a un pin del Arduino, y `ENA` debe conservar su jumper de habilitación.
+
+No conecte otros dispositivos a `D0/RX` o `D1/TX`: esos pines comparten la
+comunicación serial USB que utiliza la interfaz Python.
 
 No necesita LED externo: se utiliza `LED_BUILTIN`, el LED L del UNO (pin 13).
 El LED comienza apagado. Abrir el puerto puede reiniciar el UNO; la aplicación
@@ -48,6 +74,15 @@ Para el DHT11 conecte el pin de datos a `D5`, `VCC` a `5V` y `GND` a `GND`.
 Si utiliza el sensor suelto en lugar de un módulo, coloque una resistencia
 pull-up de 10 kΩ entre DATA y 5 V. La aplicación pide una medición cada cinco
 segundos; no es necesario pulsar un botón.
+
+Para la alarma conecte la señal del buzzer a `D6` y la salida `OUT` del PIR a
+`D7`. Conecte además ambos componentes a `GND` y al voltaje indicado por sus
+módulos; los módulos PIR comunes para Arduino suelen utilizar `5V`. El código
+usa `tone()`, por lo que un buzzer pasivo permite escuchar la alternancia entre
+440 y 523 Hz. Si el buzzer requiere más corriente que la admitida por un pin del
+UNO, contrólelo mediante un transistor o un módulo buzzer con entrada de señal.
+Después de energizarlo, deje estabilizar el PIR según las indicaciones de su
+fabricante antes de activar la alarma.
 
 ## Ejecutar
 
@@ -102,6 +137,12 @@ El script utiliza `.tools/python/python.exe` si está disponible, o el comando
   `DHT11 OFFLINE`; las demás funciones continúan disponibles. El firmware pausa
   brevemente los pulsos del servo durante la lectura y los reanuda en el mismo
   ángulo, porque la biblioteca DHT necesita suspender interrupciones para medir.
+- La sección **Seguridad · PIR y buzzer** permite activar o desactivar la alarma.
+  Mientras está activada, una transición del PIR a movimiento inicia durante
+  cinco segundos un tono alternado de 440/523 Hz. La detección queda retenida
+  hasta que Python la consulta y se registra una sola vez en `reporte.txt` con
+  la hora del RTC. Si se desactiva la alarma durante esos cinco segundos, el
+  buzzer se apaga inmediatamente y se cancela el tiempo restante.
 - Consulta `STATUS` aproximadamente cada segundo para detectar desconexiones
   y cambios de estado. Estas consultas periódicas no saturan el log.
 - Registra puertos probados, esperas, comandos, respuestas, errores y resultados.
@@ -135,9 +176,14 @@ conectadas; desconecte equipos seriales ajenos durante las pruebas.
 9. Conecte el DHT11 y espere al menos cinco segundos. Compruebe los valores en
    la sección **Clima** y una nueva línea automática en `reporte.txt`. Desconecte
    DATA para verificar que se muestre y registre `DHT11 OFFLINE`.
-10. Desconecte USB: debe mostrar error y estado desconocido. Reconecte y espere
+10. Espere a que el PIR se estabilice, pulse **Activar alarma** y provoque
+    movimiento frente al sensor. Compruebe que el buzzer se apague después de
+    cinco segundos, el estado mostrado y una sola entrada automática en
+    `reporte.txt`. Repita la detección y pulse **Desactivar alarma** antes de
+    cinco segundos para confirmar que el sonido se interrumpa inmediatamente.
+11. Desconecte USB: debe mostrar error y estado desconocido. Reconecte y espere
    la detección automática (cada candidato puede requerir unos cuatro segundos).
-11. Cierre y reabra: el puerto debe quedar disponible.
+12. Cierre y reabra: el puerto debe quedar disponible.
 
 Referencias: [UNO Rev3](https://store.arduino.cc/products/arduino-uno-rev3),
 [enumeración de puertos](https://pyserial.readthedocs.io/en/stable/tools.html),
@@ -147,13 +193,14 @@ Referencias: [UNO Rev3](https://store.arduino.cc/products/arduino-uno-rev3),
 
 - Firmware compilado para `arduino:avr:uno` con RTClib 2.1.4, Adafruit BusIO
   1.17.4, Servo 1.3.0, DHT sensor library 1.4.7 y Adafruit Unified Sensor
-  1.1.15: 11710 bytes de programa y 543 bytes de RAM.
+  1.1.15: 13732 bytes de programa y 573 bytes de RAM.
 - El firmware evita enlazar `scanf`, `printf` y `snprintf`: RTClib construye y
   valida la fecha ISO, mientras que la salida usa impresiones numéricas directas.
   El búfer serial se redujo de 48 a 32 bytes.
-- Veinte pruebas aprobadas, incluidas lectura y ajuste del RTC, `RTC OFFLINE`,
+- Veintitrés pruebas aprobadas, incluidas lectura y ajuste del RTC, `RTC OFFLINE`,
   servo, control no bloqueante de la puerta, DHT11, intervalo automático de
-  cinco segundos, botones y reporte persistente.
+  cinco segundos, alarma PIR, controles, eventos automáticos y reporte
+  persistente.
 - Ejecutar pruebas: `.\.venv\Scripts\python.exe -m unittest -v`.
-- No se cargó firmware ni se verificó el LED físico: el UNO todavía no estaba
-  conectado durante la preparación.
+- No se cargó firmware ni se realizaron pruebas físicas durante esta
+  actualización.

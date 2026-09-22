@@ -1,6 +1,7 @@
 // Placa objetivo: Arduino UNO (ATmega328P). Protocolo ASCII a 9600 baudios.
 // DS3231 por I2C: SDA -> A4, SCL -> A5, además de VCC y GND.
 // DHT11: DATA -> D5, además de VCC y GND.
+// Buzzer: señal -> D6. PIR: OUT -> D7, además de VCC y GND.
 #include <Arduino.h>
 #include <DHT.h>
 #include <RTClib.h>
@@ -184,6 +185,92 @@ void printReading() {
 }
 }  // namespace ClimateSensor
 
+namespace SecurityAlarm {
+constexpr byte kBuzzerPin = 6;
+constexpr byte kPirPin = 7;
+constexpr unsigned int kLowToneHz = 440;
+constexpr unsigned int kHighToneHz = 523;
+constexpr unsigned long kToneStepMs = 300;
+constexpr unsigned long kAlarmDurationMs = 5000;
+
+bool armed = false;
+bool motion = false;
+bool eventPending = false;
+bool sounding = false;
+bool highTone = false;
+unsigned long lastToneAt = 0;
+unsigned long alarmStartedAt = 0;
+
+void silence() {
+  if (sounding) noTone(kBuzzerPin);
+  sounding = false;
+  digitalWrite(kBuzzerPin, LOW);
+}
+
+void startSound() {
+  const unsigned long now = millis();
+  highTone = false;
+  tone(kBuzzerPin, kLowToneHz);
+  sounding = true;
+  alarmStartedAt = now;
+  lastToneAt = now;
+}
+
+void begin() {
+  pinMode(kBuzzerPin, OUTPUT);
+  pinMode(kPirPin, INPUT);
+  silence();
+  motion = digitalRead(kPirPin) == HIGH;
+}
+
+void setArmed(bool enable) {
+  const bool wasArmed = armed;
+  motion = digitalRead(kPirPin) == HIGH;
+  armed = enable;
+  if (armed && !wasArmed && motion) {
+    eventPending = true;
+    startSound();
+  }
+  if (!armed) {
+    eventPending = false;
+    silence();
+  }
+}
+
+void update() {
+  const bool currentMotion = digitalRead(kPirPin) == HIGH;
+  if (armed && currentMotion && !motion) {
+    eventPending = true;
+    startSound();
+  }
+  motion = currentMotion;
+
+  if (!armed) {
+    silence();
+    return;
+  }
+  if (!sounding) return;
+
+  const unsigned long now = millis();
+  if (now - alarmStartedAt >= kAlarmDurationMs) {
+    silence();
+  } else if (now - lastToneAt >= kToneStepMs) {
+    highTone = !highTone;
+    tone(kBuzzerPin, highTone ? kHighToneHz : kLowToneHz);
+    lastToneAt = now;
+  }
+}
+
+void printState() {
+  Serial.print(armed ? F("ALARM ARMED MOTION ")
+                     : F("ALARM DISARMED MOTION "));
+  Serial.print(motion ? '1' : '0');
+  Serial.print(F(" EVENT "));
+  Serial.println(eventPending ? '1' : '0');
+  eventPending = false;
+}
+}  // namespace SecurityAlarm
+
 namespace ClockModule {
 constexpr byte kDs3231Address = 0x68;
 RTC_DS3231 rtc;
@@ -302,6 +389,14 @@ void execute(const char *input) {
     DoorMotor::printState();
   } else if (strcmp_P(input, PSTR("DHT GET")) == 0) {
     ClimateSensor::printReading();
+  } else if (strcmp_P(input, PSTR("ALARM ON")) == 0) {
+    SecurityAlarm::setArmed(true);
+    SecurityAlarm::printState();
+  } else if (strcmp_P(input, PSTR("ALARM OFF")) == 0) {
+    SecurityAlarm::setArmed(false);
+    SecurityAlarm::printState();
+  } else if (strcmp_P(input, PSTR("ALARM STATUS")) == 0) {
+    SecurityAlarm::printState();
   } else {
     Serial.println(F("ERR UNKNOWN_COMMAND"));
   }
@@ -330,6 +425,7 @@ void setup() {
   WindowServo::begin();
   DoorMotor::begin();
   ClimateSensor::begin();
+  SecurityAlarm::begin();
   ClockModule::begin();
 }
 
@@ -337,4 +433,5 @@ void loop() {
   SerialProtocol::poll();
   WindowServo::update();
   DoorMotor::update();
+  SecurityAlarm::update();
 }

@@ -22,3 +22,45 @@
 [2026-09-21 23:45:49] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
 [2026-09-21 23:45:52] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
 [2026-09-21 23:45:55] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 00:21:37] CONTROL MANUAL | Botón Activar alarma presionado
+[2026-09-22 00:21:38] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 00:21:39] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 00:21:43] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 00:21:44] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 00:21:47] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 00:21:49] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 00:21:50] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 00:21:53] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 00:21:54] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 00:21:56] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 00:21:59] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 00:22:01] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 00:22:04] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 00:28:00] CONTROL MANUAL | Botón Activar alarma presionado
+[2026-09-22 00:28:04] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 00:28:08] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 00:28:10] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 00:28:11] CONTROL MANUAL | Botón Desactivar alarma presionado
+[2026-09-22 00:28:13] CONTROL MANUAL | Botón Activar alarma presionado
+[2026-09-22 00:28:15] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 00:28:20] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 00:28:25] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 00:28:30] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 00:28:31] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 00:28:35] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 00:28:37] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 00:28:40] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 00:28:40] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 00:28:45] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 00:28:47] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 00:28:50] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 00:28:55] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 00:28:57] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 00:29:00] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 00:29:03] CONTROL MANUAL | Botón Desactivar alarma presionado
+[2026-09-22 00:29:05] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 00:29:06] CONTROL MANUAL | Botón Encender LED presionado
+[2026-09-22 00:29:07] CONTROL MANUAL | Botón Apagar LED presionado
+[2026-09-22 00:29:10] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 00:29:15] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 00:29:20] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %

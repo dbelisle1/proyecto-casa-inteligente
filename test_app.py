@@ -15,6 +15,7 @@ from app import (
     DHT_OFFLINE,
     RTC_OFFLINE,
     RTC_UNSET,
+    alarm_values,
     dht_values,
     rtc_timestamp,
 )
@@ -32,6 +33,9 @@ class FakePort:
         self.dht_online = True
         self.temperature = 24
         self.humidity = 50
+        self.alarm_armed = False
+        self.pir_motion = False
+        self.alarm_event = False
 
     def reset_input_buffer(self):
         self.answer = b""
@@ -75,6 +79,17 @@ class FakePort:
                 if self.dht_online
                 else b"DHT OFFLINE\n"
             )
+        elif command == b"ALARM ON\n":
+            if not self.alarm_armed and self.pir_motion:
+                self.alarm_event = True
+            self.alarm_armed = True
+            self.answer = self.alarm_answer()
+        elif command == b"ALARM OFF\n":
+            self.alarm_armed = False
+            self.alarm_event = False
+            self.answer = self.alarm_answer()
+        elif command == b"ALARM STATUS\n":
+            self.answer = self.alarm_answer()
         else:
             self.answer = replies.get(command, b"LED 1\n" if self.led else b"LED 0\n")
 
@@ -84,6 +99,19 @@ class FakePort:
 
     def close(self):
         self.closed = True
+
+    def set_motion(self, detected):
+        if self.alarm_armed and detected and not self.pir_motion:
+            self.alarm_event = True
+        self.pir_motion = detected
+
+    def alarm_answer(self):
+        answer = (
+            f"ALARM {'ARMED' if self.alarm_armed else 'DISARMED'} "
+            f"MOTION {int(self.pir_motion)} EVENT {int(self.alarm_event)}\n"
+        ).encode()
+        self.alarm_event = False
+        return answer
 
 
 class ProtocolTests(unittest.TestCase):
@@ -113,6 +141,7 @@ class ProtocolTests(unittest.TestCase):
                     "SERVO CLOSED 5",
                     "DOOR CLOSED",
                     "DHT 24 50",
+                    "ALARM DISARMED MOTION 0 EVENT 0",
                 ),
             ),
             events,
@@ -215,6 +244,40 @@ class ProtocolTests(unittest.TestCase):
             capture.assert_called_once_with()
         self.assertEqual(self.worker.next_dht_report_at, 15)
 
+    def test_alarm_can_be_armed_and_reports_one_event_per_detection(self):
+        port = FakePort()
+        self.worker.connection = port
+        self.assertEqual(
+            alarm_values(self.worker.query_alarm()),
+            (False, False, False),
+        )
+        answer = self.worker.exchange("ALARM ON", accepted_prefixes=("ALARM ",))
+        self.assertEqual(alarm_values(answer), (True, False, False))
+        port.set_motion(True)
+        self.assertEqual(alarm_values(self.worker.query_alarm()), (True, True, True))
+        self.assertEqual(alarm_values(self.worker.query_alarm()), (True, True, False))
+        answer = self.worker.exchange("ALARM OFF", accepted_prefixes=("ALARM ",))
+        self.assertEqual(alarm_values(answer), (False, True, False))
+
+    def test_pir_detection_generates_automatic_report(self):
+        port = FakePort()
+        port.alarm_armed = True
+        port.set_motion(True)
+        self.worker.connection = port
+        self.worker.publish_alarm_state(self.worker.query_alarm(verbose=False))
+        events = list(self.worker.events.queue)
+        self.assertIn(("alarm", (True, True)), events)
+        self.assertIn(
+            (
+                "report",
+                (
+                    "2026-09-21 20:30:45",
+                    "AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado",
+                ),
+            ),
+            events,
+        )
+
     def test_worker_waits_until_door_finishes_moving(self):
         with patch.object(
             self.worker,
@@ -265,6 +328,7 @@ class ProtocolTests(unittest.TestCase):
                         "SERVO CLOSED 5",
                         "DOOR CLOSED",
                         "DHT OFFLINE",
+                        "ALARM DISARMED MOTION 0 EVENT 0",
                     ),
                 )
             )
@@ -276,6 +340,8 @@ class ProtocolTests(unittest.TestCase):
             self.assertNotIn("disabled", app.servo_close_button.state())
             self.assertNotIn("disabled", app.door_open_button.state())
             self.assertNotIn("disabled", app.door_close_button.state())
+            self.assertNotIn("disabled", app.alarm_on_button.state())
+            self.assertIn("disabled", app.alarm_off_button.state())
             app.toggle()
             self.assertEqual(app.commands.get_nowait(), ("led", True))
             self.assertIn("disabled", app.button.state())
@@ -290,6 +356,7 @@ class ProtocolTests(unittest.TestCase):
             self.assertEqual(app.servo_label.cget("text"), "Ventana: posición desconocida")
             self.assertEqual(app.door_label.cget("text"), "Puerta: posición desconocida")
             self.assertEqual(app.dht_label.cget("text"), "DHT11: estado desconocido")
+            self.assertEqual(app.alarm_label.cget("text"), "Alarma: estado desconocido")
         finally:
             app.destroy()
 
@@ -308,6 +375,7 @@ class ProtocolTests(unittest.TestCase):
                         "SERVO CLOSED 5",
                         "DOOR CLOSED",
                         "DHT 24 50",
+                        "ALARM DISARMED MOTION 0 EVENT 0",
                     ),
                 )
             )
@@ -343,6 +411,7 @@ class ProtocolTests(unittest.TestCase):
                         "SERVO CLOSED 5",
                         "DOOR CLOSED",
                         "DHT 24 50",
+                        "ALARM DISARMED MOTION 0 EVENT 0",
                     ),
                 )
             )
@@ -376,6 +445,7 @@ class ProtocolTests(unittest.TestCase):
                         "SERVO CLOSED 5",
                         "DOOR CLOSED",
                         "DHT 24 50",
+                        "ALARM DISARMED MOTION 0 EVENT 0",
                     ),
                 )
             )
@@ -406,6 +476,39 @@ class ProtocolTests(unittest.TestCase):
                 report_path.read_text(encoding="utf-8"),
                 "[RTC OFFLINE] CONTROL MANUAL | Prueba\n",
             )
+        finally:
+            app.destroy()
+
+    def test_gui_can_activate_and_deactivate_alarm(self):
+        with patch.object(ArduinoWorker, "start"):
+            app = App()
+        try:
+            app.withdraw()
+            app.events.put(
+                (
+                    "connected",
+                    (
+                        "COM4",
+                        False,
+                        "RTC 2026-09-21 20:30:45",
+                        "SERVO CLOSED 5",
+                        "DOOR CLOSED",
+                        "DHT 24 50",
+                        "ALARM DISARMED MOTION 0 EVENT 0",
+                    ),
+                )
+            )
+            app.process_events()
+            self.assertEqual(app.alarm_label.cget("text"), "Alarma: DESACTIVADA")
+            app.activate_alarm()
+            self.assertEqual(app.commands.get_nowait(), ("alarm", True))
+            app.events.put(("alarm", (True, True)))
+            app.events.put(("alarm_done", None))
+            app.process_events()
+            self.assertEqual(app.alarm_label.cget("text"), "Alarma: ACTIVADA")
+            self.assertEqual(app.pir_label.cget("text"), "PIR: MOVIMIENTO DETECTADO")
+            app.deactivate_alarm()
+            self.assertEqual(app.commands.get_nowait(), ("alarm", False))
         finally:
             app.destroy()
 
