@@ -17,6 +17,7 @@ from app import (
     RTC_UNSET,
     alarm_values,
     dht_values,
+    light_values,
     rtc_timestamp,
 )
 
@@ -36,6 +37,9 @@ class FakePort:
         self.alarm_armed = False
         self.pir_motion = False
         self.alarm_event = False
+        self.ldr_value = 50
+        self.external_led_on = False
+        self.light_event = False
 
     def reset_input_buffer(self):
         self.answer = b""
@@ -62,9 +66,9 @@ class FakePort:
             self.answer = b"SERVO OPEN 89\n"
         elif command == b"SERVO CLOSE\n":
             self.servo_open = False
-            self.answer = b"SERVO CLOSED 5\n"
+            self.answer = b"SERVO CLOSED 0\n"
         elif command == b"SERVO STATUS\n":
-            self.answer = b"SERVO OPEN 89\n" if self.servo_open else b"SERVO CLOSED 5\n"
+            self.answer = b"SERVO OPEN 89\n" if self.servo_open else b"SERVO CLOSED 0\n"
         elif command == b"DOOR OPEN\n":
             self.door_open = True
             self.answer = b"DOOR OPEN\n"
@@ -83,13 +87,17 @@ class FakePort:
             if not self.alarm_armed and self.pir_motion:
                 self.alarm_event = True
             self.alarm_armed = True
+            self.refresh_light()
             self.answer = self.alarm_answer()
         elif command == b"ALARM OFF\n":
             self.alarm_armed = False
             self.alarm_event = False
+            self.refresh_light()
             self.answer = self.alarm_answer()
         elif command == b"ALARM STATUS\n":
             self.answer = self.alarm_answer()
+        elif command == b"LIGHT STATUS\n":
+            self.answer = self.light_answer()
         else:
             self.answer = replies.get(command, b"LED 1\n" if self.led else b"LED 0\n")
 
@@ -111,6 +119,24 @@ class FakePort:
             f"MOTION {int(self.pir_motion)} EVENT {int(self.alarm_event)}\n"
         ).encode()
         self.alarm_event = False
+        return answer
+
+    def set_ldr(self, value):
+        self.ldr_value = value
+        self.refresh_light()
+
+    def refresh_light(self):
+        desired = self.alarm_armed and self.ldr_value < 500
+        if desired != self.external_led_on:
+            self.external_led_on = desired
+            self.light_event = True
+
+    def light_answer(self):
+        answer = (
+            f"LIGHT {'ON' if self.external_led_on else 'OFF'} "
+            f"VALUE {self.ldr_value} EVENT {int(self.light_event)}\n"
+        ).encode()
+        self.light_event = False
         return answer
 
 
@@ -138,10 +164,11 @@ class ProtocolTests(unittest.TestCase):
                     "COM4",
                     False,
                     "RTC 2026-09-21 20:30:45",
-                    "SERVO CLOSED 5",
+                    "SERVO CLOSED 0",
                     "DOOR CLOSED",
                     "DHT 24 50",
                     "ALARM DISARMED MOTION 0 EVENT 0",
+                    "LIGHT OFF VALUE 50 EVENT 0",
                 ),
             ),
             events,
@@ -184,15 +211,15 @@ class ProtocolTests(unittest.TestCase):
 
     def test_servo_accepts_only_the_two_configured_positions(self):
         self.worker.connection = FakePort()
-        self.assertEqual(self.worker.query_servo(), "SERVO CLOSED 5")
+        self.assertEqual(self.worker.query_servo(), "SERVO CLOSED 0")
         self.assertEqual(
             self.worker.exchange("SERVO OPEN", {"SERVO OPEN 89"}),
             "SERVO OPEN 89",
         )
         self.assertEqual(self.worker.query_servo(), "SERVO OPEN 89")
         self.assertEqual(
-            self.worker.exchange("SERVO CLOSE", {"SERVO CLOSED 5"}),
-            "SERVO CLOSED 5",
+            self.worker.exchange("SERVO CLOSE", {"SERVO CLOSED 0"}),
+            "SERVO CLOSED 0",
         )
 
     def test_door_motor_accepts_open_and_close_commands(self):
@@ -278,6 +305,35 @@ class ProtocolTests(unittest.TestCase):
             events,
         )
 
+    def test_ldr_led_only_operates_while_alarm_is_armed(self):
+        port = FakePort()
+        self.worker.connection = port
+        port.set_ldr(300)
+        self.assertEqual(light_values(self.worker.query_light()), (False, 300, False))
+        self.worker.exchange("ALARM ON", accepted_prefixes=("ALARM ",))
+        self.assertEqual(light_values(self.worker.query_light()), (True, 300, True))
+        self.worker.exchange("ALARM OFF", accepted_prefixes=("ALARM ",))
+        self.assertEqual(light_values(self.worker.query_light()), (False, 300, True))
+
+    def test_ldr_change_generates_automatic_report(self):
+        port = FakePort()
+        port.alarm_armed = True
+        port.set_ldr(300)
+        self.worker.connection = port
+        self.worker.publish_light_state(self.worker.query_light(verbose=False))
+        events = list(self.worker.events.queue)
+        self.assertIn(("light", (True, 300)), events)
+        self.assertIn(
+            (
+                "report",
+                (
+                    "2026-09-21 20:30:45",
+                    "AUTOMÁTICO | LDR | Oscuridad detectada (300) | LED exterior encendido",
+                ),
+            ),
+            events,
+        )
+
     def test_worker_waits_until_door_finishes_moving(self):
         with patch.object(
             self.worker,
@@ -325,10 +381,11 @@ class ProtocolTests(unittest.TestCase):
                         "COM4",
                         False,
                         "RTC OFFLINE",
-                        "SERVO CLOSED 5",
+                        "SERVO CLOSED 0",
                         "DOOR CLOSED",
                         "DHT OFFLINE",
                         "ALARM DISARMED MOTION 0 EVENT 0",
+                        "LIGHT OFF VALUE 50 EVENT 0",
                     ),
                 )
             )
@@ -357,6 +414,7 @@ class ProtocolTests(unittest.TestCase):
             self.assertEqual(app.door_label.cget("text"), "Puerta: posición desconocida")
             self.assertEqual(app.dht_label.cget("text"), "DHT11: estado desconocido")
             self.assertEqual(app.alarm_label.cget("text"), "Alarma: estado desconocido")
+            self.assertEqual(app.ldr_label.cget("text"), "LDR: estado desconocido")
         finally:
             app.destroy()
 
@@ -372,10 +430,11 @@ class ProtocolTests(unittest.TestCase):
                         "COM4",
                         False,
                         "RTC 2026-09-21 20:30:45",
-                        "SERVO CLOSED 5",
+                        "SERVO CLOSED 0",
                         "DOOR CLOSED",
                         "DHT 24 50",
                         "ALARM DISARMED MOTION 0 EVENT 0",
+                        "LIGHT OFF VALUE 50 EVENT 0",
                     ),
                 )
             )
@@ -408,15 +467,16 @@ class ProtocolTests(unittest.TestCase):
                         "COM4",
                         False,
                         "RTC 2026-09-21 20:30:45",
-                        "SERVO CLOSED 5",
+                        "SERVO CLOSED 0",
                         "DOOR CLOSED",
                         "DHT 24 50",
                         "ALARM DISARMED MOTION 0 EVENT 0",
+                        "LIGHT OFF VALUE 50 EVENT 0",
                     ),
                 )
             )
             app.process_events()
-            self.assertEqual(app.servo_label.cget("text"), "Ventana: CERRADA (5°)")
+            self.assertEqual(app.servo_label.cget("text"), "Ventana: CERRADA (0°)")
             app.open_window()
             self.assertEqual(app.commands.get_nowait(), ("servo", True))
             app.events.put(("servo_done", True))
@@ -426,7 +486,7 @@ class ProtocolTests(unittest.TestCase):
             self.assertEqual(app.commands.get_nowait(), ("servo", False))
             app.events.put(("servo_done", False))
             app.process_events()
-            self.assertEqual(app.servo_label.cget("text"), "Ventana: CERRADA (5°)")
+            self.assertEqual(app.servo_label.cget("text"), "Ventana: CERRADA (0°)")
         finally:
             app.destroy()
 
@@ -442,10 +502,11 @@ class ProtocolTests(unittest.TestCase):
                         "COM4",
                         False,
                         "RTC 2026-09-21 20:30:45",
-                        "SERVO CLOSED 5",
+                        "SERVO CLOSED 0",
                         "DOOR CLOSED",
                         "DHT 24 50",
                         "ALARM DISARMED MOTION 0 EVENT 0",
+                        "LIGHT OFF VALUE 50 EVENT 0",
                     ),
                 )
             )
@@ -491,15 +552,21 @@ class ProtocolTests(unittest.TestCase):
                         "COM4",
                         False,
                         "RTC 2026-09-21 20:30:45",
-                        "SERVO CLOSED 5",
+                        "SERVO CLOSED 0",
                         "DOOR CLOSED",
                         "DHT 24 50",
                         "ALARM DISARMED MOTION 0 EVENT 0",
+                        "LIGHT OFF VALUE 50 EVENT 0",
                     ),
                 )
             )
             app.process_events()
             self.assertEqual(app.alarm_label.cget("text"), "Alarma: DESACTIVADA")
+            self.assertEqual(app.ldr_label.cget("text"), "LDR: 50 / 1023")
+            self.assertEqual(
+                app.external_led_label.cget("text"),
+                "LED exterior: APAGADO (alarma desactivada)",
+            )
             app.activate_alarm()
             self.assertEqual(app.commands.get_nowait(), ("alarm", True))
             app.events.put(("alarm", (True, True)))

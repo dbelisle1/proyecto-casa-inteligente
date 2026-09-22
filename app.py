@@ -20,6 +20,7 @@ RTC_UNSET = "RTC SIN CONFIGURAR"
 DHT_OFFLINE = "DHT OFFLINE"
 DHT_REPORT_INTERVAL = 5.0
 ALARM_POLL_INTERVAL = 0.25
+LIGHT_POLL_INTERVAL = 0.5
 HEARTBEAT_INTERVAL = 1.0
 WORKER_TICK_INTERVAL = 0.1
 
@@ -84,6 +85,28 @@ def alarm_values(answer):
     return parts[1] == "ARMED", parts[3] == "1", parts[5] == "1"
 
 
+def light_values(answer):
+    """Interpreta ``LIGHT <ON|OFF> VALUE <0..1023> EVENT <0|1>``."""
+    parts = answer.split()
+    valid = (
+        len(parts) == 6
+        and parts[0] == "LIGHT"
+        and parts[1] in ("ON", "OFF")
+        and parts[2] == "VALUE"
+        and parts[4] == "EVENT"
+        and parts[5] in ("0", "1")
+    )
+    if not valid:
+        raise ValueError(f"Respuesta de iluminación inválida: {answer!r}")
+    try:
+        ldr_value = int(parts[3])
+    except ValueError as error:
+        raise ValueError(f"Respuesta de iluminación inválida: {answer!r}") from error
+    if not 0 <= ldr_value <= 1023:
+        raise ValueError(f"Lectura LDR fuera de rango: {ldr_value}")
+    return parts[1] == "ON", ldr_value, parts[5] == "1"
+
+
 class ArduinoWorker(threading.Thread):
     """Único propietario del puerto; nunca modifica widgets desde este hilo."""
 
@@ -95,6 +118,7 @@ class ArduinoWorker(threading.Thread):
         self.connection = None
         self.next_dht_report_at = None
         self.next_alarm_poll_at = None
+        self.next_light_poll_at = None
         self.next_heartbeat_at = None
         self.remembered_port = self.load_remembered_port()
 
@@ -151,7 +175,7 @@ class ArduinoWorker(threading.Thread):
 
     def query_servo(self, verbose=True):
         return self.exchange(
-            "SERVO STATUS", {"SERVO OPEN 89", "SERVO CLOSED 5"}, verbose=verbose
+            "SERVO STATUS", {"SERVO OPEN 89", "SERVO CLOSED 0"}, verbose=verbose
         )
 
     def query_door(self, verbose=True):
@@ -174,6 +198,16 @@ class ArduinoWorker(threading.Thread):
         )
         try:
             alarm_values(answer)
+        except ValueError as error:
+            raise serial.SerialException(str(error)) from error
+        return answer
+
+    def query_light(self, verbose=True):
+        answer = self.exchange(
+            "LIGHT STATUS", accepted_prefixes=("LIGHT ",), verbose=verbose
+        )
+        try:
+            light_values(answer)
         except ValueError as error:
             raise serial.SerialException(str(error)) from error
         return answer
@@ -206,8 +240,15 @@ class ArduinoWorker(threading.Thread):
             self.log(f"No se pudo consultar el sistema de alarma: {error}")
             return None
 
+    def light_for_connection(self):
+        try:
+            return self.query_light(verbose=False)
+        except (OSError, serial.SerialException) as error:
+            self.log(f"No se pudo consultar la iluminación automática: {error}")
+            return None
+
     def wait_for_door(self, expected, moving):
-        deadline = time.monotonic() + 3
+        deadline = time.monotonic() + 4
         while not self.stop.is_set() and time.monotonic() < deadline:
             state = self.query_door(verbose=False)
             if state == expected:
@@ -280,6 +321,33 @@ class ArduinoWorker(threading.Thread):
         self.next_alarm_poll_at = now + ALARM_POLL_INTERVAL
         self.publish_alarm_state(self.query_alarm(verbose=False))
 
+    def publish_light_state(self, answer):
+        try:
+            led_on, ldr_value, event_pending = light_values(answer)
+        except ValueError as error:
+            raise serial.SerialException(str(error)) from error
+        self.events.put(("light", (led_on, ldr_value)))
+        if event_pending:
+            if led_on:
+                message = (
+                    f"AUTOMÁTICO | LDR | Oscuridad detectada ({ldr_value}) | "
+                    "LED exterior encendido"
+                )
+            else:
+                message = (
+                    f"AUTOMÁTICO | LDR | LED exterior apagado | Lectura: {ldr_value}"
+                )
+            self.report(message)
+
+    def maybe_poll_light(self):
+        if self.next_light_poll_at is None:
+            return
+        now = time.monotonic()
+        if now < self.next_light_poll_at:
+            return
+        self.next_light_poll_at = now + LIGHT_POLL_INTERVAL
+        self.publish_light_state(self.query_light(verbose=False))
+
     def maybe_send_heartbeat(self):
         if self.next_heartbeat_at is None:
             return
@@ -299,6 +367,7 @@ class ArduinoWorker(threading.Thread):
             self.connection = None
         self.next_dht_report_at = None
         self.next_alarm_poll_at = None
+        self.next_light_poll_at = None
         self.next_heartbeat_at = None
         self.events.put(("disconnected", None))
 
@@ -355,11 +424,13 @@ class ArduinoWorker(threading.Thread):
                 door_state = self.door_for_connection()
                 dht_state = self.dht_for_connection()
                 alarm_state = self.alarm_for_connection()
+                light_state = self.light_for_connection()
                 self.log(f"Arduino identificado en {port.device}; estado inicial confirmado.")
                 self.remember_port(port.device)
                 now = time.monotonic()
                 self.next_dht_report_at = now + DHT_REPORT_INTERVAL
                 self.next_alarm_poll_at = now + ALARM_POLL_INTERVAL
+                self.next_light_poll_at = now + LIGHT_POLL_INTERVAL
                 self.next_heartbeat_at = now + HEARTBEAT_INTERVAL
                 self.events.put(
                     (
@@ -372,6 +443,7 @@ class ArduinoWorker(threading.Thread):
                             door_state,
                             dht_state,
                             alarm_state,
+                            light_state,
                         ),
                     )
                 )
@@ -399,6 +471,7 @@ class ArduinoWorker(threading.Thread):
                             continue
                     self.maybe_capture_dht_report()
                     self.maybe_poll_alarm()
+                    self.maybe_poll_light()
                     self.maybe_send_heartbeat()
                     try:
                         action, value = self.commands.get(timeout=WORKER_TICK_INTERVAL)
@@ -445,11 +518,11 @@ class ArduinoWorker(threading.Thread):
                             report_message = (
                                 "CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)"
                                 if open_window
-                                else "CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)"
+                                else "CONTROL MANUAL | Botón Cerrar ventana presionado (0 grados)"
                             )
                             rtc_answer = self.rtc_for_report()
                             command = "SERVO OPEN" if open_window else "SERVO CLOSE"
-                            expected = "SERVO OPEN 89" if open_window else "SERVO CLOSED 5"
+                            expected = "SERVO OPEN 89" if open_window else "SERVO CLOSED 0"
                             self.log(
                                 f"Acción: {'abrir' if open_window else 'cerrar'} la ventana con el servomotor."
                             )
@@ -515,7 +588,7 @@ class App(tk.Tk):
     def __init__(self, report_path=REPORT_FILE):
         super().__init__()
         self.title("Casa inteligente · Arduino UNO")
-        self.geometry("980x650")
+        self.geometry("980x700")
         self.minsize(820, 560)
         self.report_path = Path(report_path)
         self.events, self.commands = queue.Queue(), queue.Queue()
@@ -530,6 +603,8 @@ class App(tk.Tk):
         self.dht_answer = None
         self.alarm_armed = None
         self.pir_motion = None
+        self.external_led_on = None
+        self.ldr_value = None
         self.closing = False
         frame = ttk.Frame(self, padding=20)
         frame.pack(fill="both", expand=True)
@@ -595,11 +670,11 @@ class App(tk.Tk):
         servo_button_row = ttk.Frame(self.left_controls)
         servo_button_row.pack(anchor="w", pady=10)
         self.servo_open_button = ttk.Button(
-            servo_button_row, text="Abrir ventana (89°)", command=self.open_window, state="disabled"
+            servo_button_row, text="Abrir ventana", command=self.open_window, state="disabled"
         )
         self.servo_open_button.pack(side="left")
         self.servo_close_button = ttk.Button(
-            servo_button_row, text="Cerrar ventana (5°)", command=self.close_window, state="disabled"
+            servo_button_row, text="Cerrar ventana", command=self.close_window, state="disabled"
         )
         self.servo_close_button.pack(side="left", padx=(8, 0))
         ttk.Separator(self.left_controls).pack(fill="x", pady=(4, 12))
@@ -657,6 +732,19 @@ class App(tk.Tk):
         )
         self.alarm_off_button.pack(side="left", padx=(8, 0))
 
+        ttk.Separator(self.right_controls).pack(fill="x", pady=(4, 12))
+        ttk.Label(
+            self.right_controls,
+            text="Iluminación automática · LDR",
+            font=("Segoe UI", 12, "bold"),
+        ).pack(anchor="w")
+        self.ldr_label = ttk.Label(self.right_controls, text="LDR: estado desconocido")
+        self.ldr_label.pack(anchor="w", pady=(4, 0))
+        self.external_led_label = ttk.Label(
+            self.right_controls, text="LED exterior: estado desconocido"
+        )
+        self.external_led_label.pack(anchor="w", pady=(2, 10))
+
         ttk.Separator(frame).pack(fill="x", pady=(8, 12))
         ttk.Label(frame, text="Registro de ejecución y errores").pack(anchor="w")
         self.log_box = ScrolledText(frame, height=8, state="disabled", wrap="word", font=("Consolas", 10))
@@ -685,7 +773,7 @@ class App(tk.Tk):
         self.rtc_set_button.configure(state=rtc_button_state)
         self.rtc_read_button.configure(state=rtc_button_state)
         if self.connected and self.window_open is not None:
-            servo_text = "Ventana: ABIERTA (89°)" if self.window_open else "Ventana: CERRADA (5°)"
+            servo_text = "Ventana: ABIERTA (89°)" if self.window_open else "Ventana: CERRADA (0°)"
         else:
             servo_text = "Ventana: posición desconocida"
         self.servo_label.configure(text=servo_text)
@@ -731,6 +819,18 @@ class App(tk.Tk):
                 else "disabled"
             )
         )
+        if self.connected and self.ldr_value is not None:
+            self.ldr_label.configure(text=f"LDR: {self.ldr_value} / 1023")
+            if self.alarm_armed is False:
+                light_text = "LED exterior: APAGADO (alarma desactivada)"
+            elif self.external_led_on:
+                light_text = "LED exterior: ENCENDIDO"
+            else:
+                light_text = "LED exterior: APAGADO"
+            self.external_led_label.configure(text=light_text)
+        else:
+            self.ldr_label.configure(text="LDR: estado desconocido")
+            self.external_led_label.configure(text="LED exterior: estado desconocido")
 
     def toggle(self):
         if self.connected and not self.busy:
@@ -757,7 +857,7 @@ class App(tk.Tk):
     def set_window(self, open_window):
         if self.connected and not self.busy:
             self.busy, self.busy_action = True, "servo"
-            position = 89 if open_window else 5
+            position = 89 if open_window else 0
             action = "abrir" if open_window else "cerrar"
             self.append_log(f"Acción: {action} la ventana; posición solicitada: {position}°.")
             self.commands.put(("servo", open_window))
@@ -830,12 +930,13 @@ class App(tk.Tk):
                     door_answer,
                     self.dht_answer,
                     alarm_answer,
+                    light_answer,
                 ) = value
                 self.connected, self.busy, self.busy_action = True, False, None
                 self.window_open = (
                     True
                     if servo_answer == "SERVO OPEN 89"
-                    else False if servo_answer == "SERVO CLOSED 5" else None
+                    else False if servo_answer == "SERVO CLOSED 0" else None
                 )
                 self.door_open = (
                     True
@@ -846,6 +947,10 @@ class App(tk.Tk):
                     self.alarm_armed, self.pir_motion = None, None
                 else:
                     self.alarm_armed, self.pir_motion, _ = alarm_values(alarm_answer)
+                if light_answer is None:
+                    self.external_led_on, self.ldr_value = None, None
+                else:
+                    self.external_led_on, self.ldr_value, _ = light_values(light_answer)
                 self.connection_label.configure(text=f"Conectado: Arduino UNO · {port} · 9600 baudios")
                 self.rtc_label.configure(text=f"RTC: {rtc_timestamp(rtc_answer)}")
             elif kind == "disconnected":
@@ -855,6 +960,8 @@ class App(tk.Tk):
                 self.dht_answer = None
                 self.alarm_armed = None
                 self.pir_motion = None
+                self.external_led_on = None
+                self.ldr_value = None
                 self.connection_label.configure(text="Sin conexión · búsqueda automática activa")
                 self.rtc_label.configure(text="RTC: estado desconocido")
             elif kind in ("done", "state"):
@@ -876,6 +983,8 @@ class App(tk.Tk):
                 self.alarm_armed, self.pir_motion = value
             elif kind == "alarm_done":
                 self.busy, self.busy_action = False, None
+            elif kind == "light":
+                self.external_led_on, self.ldr_value = value
             self.render()
         if not self.closing:
             self.after(100, self.process_events)

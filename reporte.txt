@@ -64,3 +64,471 @@
 [2026-09-22 00:29:10] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
 [2026-09-22 00:29:15] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
 [2026-09-22 00:29:20] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 00:45:51] CONTROL MANUAL | Botón Activar alarma presionado
+[2026-09-22 00:45:52] AUTOMÁTICO | LDR | Oscuridad detectada (811) | LED exterior encendido
+[2026-09-22 00:45:53] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 00:45:58] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 00:46:03] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 00:46:08] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 00:46:13] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 00:46:18] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 00:46:23] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 00:46:28] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 00:46:29] AUTOMÁTICO | LDR | LED exterior apagado | Lectura: 33
+[2026-09-22 00:46:30] AUTOMÁTICO | LDR | Oscuridad detectada (391) | LED exterior encendido
+[2026-09-22 00:46:33] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 00:48:59] CONTROL MANUAL | Botón Activar alarma presionado
+[2026-09-22 00:48:59] AUTOMÁTICO | LDR | Oscuridad detectada (779) | LED exterior encendido
+[2026-09-22 00:49:01] AUTOMÁTICO | LDR | LED exterior apagado | Lectura: 396
+[2026-09-22 00:49:03] AUTOMÁTICO | LDR | Oscuridad detectada (727) | LED exterior encendido
+[2026-09-22 00:49:03] AUTOMÁTICO | LDR | LED exterior apagado | Lectura: 401
+[2026-09-22 00:49:04] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 00:49:05] AUTOMÁTICO | LDR | LED exterior apagado | Lectura: 374
+[2026-09-22 00:49:05] AUTOMÁTICO | LDR | LED exterior apagado | Lectura: 369
+[2026-09-22 00:49:06] AUTOMÁTICO | LDR | Oscuridad detectada (736) | LED exterior encendido
+[2026-09-22 00:54:04] CONTROL MANUAL | Botón Activar alarma presionado
+[2026-09-22 00:54:04] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 00:54:05] AUTOMÁTICO | LDR | Oscuridad detectada (436) | LED exterior encendido
+[2026-09-22 00:54:05] AUTOMÁTICO | LDR | LED exterior apagado | Lectura: 711
+[2026-09-22 00:54:07] AUTOMÁTICO | LDR | LED exterior apagado | Lectura: 582
+[2026-09-22 00:54:07] AUTOMÁTICO | LDR | Oscuridad detectada (460) | LED exterior encendido
+[2026-09-22 00:54:08] AUTOMÁTICO | LDR | Oscuridad detectada (456) | LED exterior encendido
+[2026-09-22 00:54:08] AUTOMÁTICO | LDR | LED exterior apagado | Lectura: 668
+[2026-09-22 00:54:09] AUTOMÁTICO | LDR | Oscuridad detectada (258) | LED exterior encendido
+[2026-09-22 00:54:09] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:04:56] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-22 01:04:59] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-22 01:05:00] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:05:05] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[RTC OFFLINE] SISTEMA | Error de comunicación: WriteFile failed (PermissionError(13, 'Access is denied.', None, 5))
+[2026-09-22 01:08:05] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-22 01:08:06] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:08:07] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-22 01:08:11] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:08:16] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:08:21] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:08:27] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:08:32] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:08:37] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:08:42] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:08:47] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:08:52] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:08:52] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:08:55] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:08:57] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:09:02] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:09:07] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:09:12] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:09:13] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:09:16] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:09:18] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:09:23] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:09:28] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:09:28] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:09:32] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:09:33] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:09:38] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:09:43] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:09:48] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[RTC OFFLINE] SISTEMA | Error de comunicación: WriteFile failed (PermissionError(13, 'Access is denied.', None, 5))
+[2026-09-22 01:13:57] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:14:00] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 67 %
+[2026-09-22 01:14:01] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:14:05] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 67 %
+[2026-09-22 01:14:07] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:14:09] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:14:11] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 67 %
+[2026-09-22 01:14:12] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:14:14] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:14:16] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 67 %
+[2026-09-22 01:14:21] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 67 %
+[2026-09-22 01:14:21] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:14:25] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:14:27] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:14:27] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:14:31] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:14:32] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:14:34] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:14:37] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:14:39] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:14:42] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:14:43] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:14:47] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:14:48] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:14:51] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:14:53] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:14:54] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:14:57] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:14:58] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:15:00] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:15:03] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:15:03] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:15:08] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:15:12] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:15:14] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:15:16] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:15:19] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:15:19] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:15:24] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:15:26] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:15:29] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:15:34] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:15:34] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:15:39] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:15:41] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:15:44] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:15:49] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:15:54] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:15:59] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:16:04] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:16:09] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:16:14] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:16:19] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:16:24] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:16:30] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:16:35] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:21:09] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:21:12] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:21:14] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:21:17] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:21:17] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:21:21] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:21:23] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:23:23] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:23:26] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:23:27] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:23:29] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:23:31] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:23:36] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:23:41] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:23:46] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:23:51] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:23:56] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:24:01] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:24:06] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:24:11] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:24:16] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:24:21] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:24:26] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:24:31] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:24:37] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:24:42] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:24:47] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:24:52] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:25:07] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:25:09] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:25:10] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:25:11] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:25:12] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:26:33] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:26:36] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:26:37] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:26:38] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:26:39] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:27:01] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:27:03] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:27:05] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:27:06] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:27:31] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:27:33] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:27:34] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:27:35] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:27:36] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:28:08] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:28:13] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:28:18] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:28:20] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:28:22] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:28:23] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:28:23] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:28:24] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:28:25] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:28:25] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:28:26] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:28:27] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:28:27] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:28:28] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:28:28] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:28:33] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:28:38] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 65 %
+[2026-09-22 01:29:00] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:29:02] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:29:03] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:29:05] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:29:06] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:29:07] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:29:08] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:29:09] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:29:09] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:29:10] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:29:11] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:29:12] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:29:13] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:29:14] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:29:15] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:29:15] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:29:16] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:29:17] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:29:39] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:29:41] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:29:42] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:29:47] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:29:52] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:29:57] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:30:02] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:30:08] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:30:13] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:30:18] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:30:23] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:30:27] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:30:28] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:30:29] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:30:31] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:30:32] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:30:33] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:30:33] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:30:35] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:31:00] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:31:01] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:31:03] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:31:04] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:31:04] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:31:06] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:31:09] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:31:11] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:31:12] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:31:14] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:31:14] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:31:16] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:31:17] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:31:19] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:31:19] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:31:20] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:31:23] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-22 01:31:24] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 67 %
+[2026-09-22 01:31:25] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-22 01:31:29] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:31:34] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 67 %
+[2026-09-22 01:31:39] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 67 %
+[2026-09-22 01:31:41] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-22 01:31:44] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 67 %
+[2026-09-22 01:31:44] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[RTC OFFLINE] SISTEMA | Error de comunicación: WriteFile failed (PermissionError(13, 'Access is denied.', None, 5))
+[2026-09-22 01:39:06] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-22 01:39:07] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:39:08] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:39:09] CONTROL MANUAL | Botón Cerrar ventana presionado (0 grados)
+[2026-09-22 01:39:10] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:39:13] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:39:15] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:39:15] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-22 01:39:16] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:39:17] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:39:18] CONTROL MANUAL | Botón Cerrar ventana presionado (0 grados)
+[2026-09-22 01:39:19] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:39:20] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:39:13] CONTROL MANUAL | Asignación de hora al RTC: 2026-09-22 01:39:13
+[2026-09-22 01:39:14] CONTROL MANUAL | Consulta de fecha y hora del RTC
+[2026-09-22 01:39:15] CONTROL MANUAL | Consulta de fecha y hora del RTC
+[2026-09-22 01:39:15] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:39:15] CONTROL MANUAL | Consulta de fecha y hora del RTC
+[2026-09-22 01:39:16] CONTROL MANUAL | Consulta de fecha y hora del RTC
+[2026-09-22 01:39:20] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:39:25] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:39:30] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 66 %
+[2026-09-22 01:39:35] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 67 %
+[2026-09-22 01:39:40] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 67 %
+[2026-09-22 01:39:45] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 67 %
+[2026-09-22 01:39:50] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 67 %
+[2026-09-22 01:39:55] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 67 %
+[2026-09-22 01:40:00] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 74 %
+[2026-09-22 01:40:06] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 72 %
+[2026-09-22 01:40:11] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 74 %
+[2026-09-22 01:40:16] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 79 %
+[2026-09-22 01:40:21] AUTOMÁTICO | DHT11 | Temperatura: 30 °C | Humedad: 79 %
+[2026-09-22 01:40:26] AUTOMÁTICO | DHT11 | Temperatura: 30 °C | Humedad: 79 %
+[RTC OFFLINE] SISTEMA | Error de comunicación: WriteFile failed (PermissionError(13, 'Access is denied.', None, 5))
+[2026-09-22 01:42:15] AUTOMÁTICO | DHT11 | Temperatura: 31 °C | Humedad: 61 %
+[2026-09-22 01:42:20] AUTOMÁTICO | DHT11 | Temperatura: 31 °C | Humedad: 61 %
+[2026-09-22 01:42:25] AUTOMÁTICO | DHT11 | Temperatura: 31 °C | Humedad: 60 %
+[2026-09-22 01:42:30] AUTOMÁTICO | DHT11 | Temperatura: 31 °C | Humedad: 72 %
+[2026-09-22 01:42:35] AUTOMÁTICO | DHT11 | Temperatura: 31 °C | Humedad: 77 %
+[2026-09-22 01:46:09] CONTROL MANUAL | Botón Activar alarma presionado
+[2026-09-22 01:46:10] AUTOMÁTICO | LDR | Oscuridad detectada (366) | LED exterior encendido
+[2026-09-22 01:46:13] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 62 %
+[2026-09-22 01:46:17] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:46:18] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 63 %
+[2026-09-22 01:46:23] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 63 %
+[2026-09-22 01:46:26] AUTOMÁTICO | LDR | LED exterior apagado | Lectura: 670
+[2026-09-22 01:46:28] AUTOMÁTICO | LDR | Oscuridad detectada (278) | LED exterior encendido
+[2026-09-22 01:46:28] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 63 %
+[2026-09-22 01:46:33] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 63 %
+[2026-09-22 01:46:38] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 63 %
+[2026-09-22 01:46:44] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 63 %
+[2026-09-22 01:46:49] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 63 %
+[2026-09-22 01:46:54] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 64 %
+[2026-09-22 01:46:59] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 64 %
+[2026-09-22 01:47:01] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:47:04] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 64 %
+[2026-09-22 01:47:09] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 64 %
+[2026-09-22 01:47:14] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 64 %
+[2026-09-22 01:47:16] CONTROL MANUAL | Botón Desactivar alarma presionado
+[2026-09-22 01:47:16] AUTOMÁTICO | LDR | LED exterior apagado | Lectura: 304
+[2026-09-22 01:47:17] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:47:17] CONTROL MANUAL | Botón Activar alarma presionado
+[2026-09-22 01:47:17] AUTOMÁTICO | LDR | Oscuridad detectada (304) | LED exterior encendido
+[2026-09-22 01:47:19] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 64 %
+[2026-09-22 01:47:24] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 64 %
+[2026-09-22 01:47:29] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 64 %
+[2026-09-22 01:47:30] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:47:34] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 64 %
+[2026-09-22 01:47:40] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 65 %
+[2026-09-22 01:47:43] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:47:45] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 65 %
+[2026-09-22 01:47:46] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:47:50] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 65 %
+[2026-09-22 01:47:50] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:47:52] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:47:55] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 65 %
+[2026-09-22 01:47:58] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:48:00] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 65 %
+[2026-09-22 01:48:03] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:48:05] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 65 %
+[2026-09-22 01:48:08] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:48:10] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 65 %
+[2026-09-22 01:48:11] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:48:15] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 65 %
+[2026-09-22 01:48:19] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:48:20] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 65 %
+[2026-09-22 01:48:21] CONTROL MANUAL | Botón Desactivar alarma presionado
+[2026-09-22 01:48:21] AUTOMÁTICO | LDR | LED exterior apagado | Lectura: 305
+[2026-09-22 01:48:22] CONTROL MANUAL | Botón Activar alarma presionado
+[2026-09-22 01:48:22] AUTOMÁTICO | LDR | Oscuridad detectada (306) | LED exterior encendido
+[2026-09-22 01:48:24] CONTROL MANUAL | Botón Desactivar alarma presionado
+[2026-09-22 01:48:24] AUTOMÁTICO | LDR | LED exterior apagado | Lectura: 305
+[2026-09-22 01:48:25] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 65 %
+[2026-09-22 01:48:30] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 65 %
+[2026-09-22 01:48:35] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 66 %
+[RTC OFFLINE] SISTEMA | Error de comunicación: WriteFile failed (PermissionError(13, 'Access is denied.', None, 5))
+[2026-09-22 01:49:25] CONTROL MANUAL | Botón Activar alarma presionado
+[2026-09-22 01:49:28] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 66 %
+[2026-09-22 01:49:28] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:49:32] AUTOMÁTICO | LDR | LED exterior apagado | Lectura: 578
+[2026-09-22 01:49:32] AUTOMÁTICO | LDR | Oscuridad detectada (456) | LED exterior encendido
+[2026-09-22 01:49:33] AUTOMÁTICO | LDR | LED exterior apagado | Lectura: 612
+[2026-09-22 01:49:33] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 67 %
+[2026-09-22 01:49:33] AUTOMÁTICO | LDR | Oscuridad detectada (395) | LED exterior encendido
+[2026-09-22 01:49:34] AUTOMÁTICO | LDR | LED exterior apagado | Lectura: 611
+[2026-09-22 01:49:35] AUTOMÁTICO | LDR | Oscuridad detectada (460) | LED exterior encendido
+[2026-09-22 01:49:36] AUTOMÁTICO | LDR | LED exterior apagado | Lectura: 589
+[2026-09-22 01:49:38] AUTOMÁTICO | LDR | Oscuridad detectada (381) | LED exterior encendido
+[2026-09-22 01:49:38] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 66 %
+[2026-09-22 01:49:39] AUTOMÁTICO | LDR | LED exterior apagado | Lectura: 620
+[2026-09-22 01:49:43] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 66 %
+[2026-09-22 01:49:48] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 66 %
+[2026-09-22 01:49:49] AUTOMÁTICO | LDR | Oscuridad detectada (393) | LED exterior encendido
+[2026-09-22 01:49:52] AUTOMÁTICO | LDR | LED exterior apagado | Lectura: 506
+[2026-09-22 01:49:53] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 66 %
+[2026-09-22 01:49:58] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 67 %
+[2026-09-22 01:50:03] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:50:03] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 66 %
+[2026-09-22 01:50:08] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 66 %
+[2026-09-22 01:50:09] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:50:13] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 66 %
+[2026-09-22 01:50:15] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:50:18] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:50:19] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 66 %
+[2026-09-22 01:50:22] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:50:24] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 65 %
+[2026-09-22 01:50:24] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:50:29] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 65 %
+[2026-09-22 01:50:30] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:50:34] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 65 %
+[2026-09-22 01:50:34] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:50:36] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:50:39] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 65 %
+[2026-09-22 01:50:42] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:50:44] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 65 %
+[2026-09-22 01:50:46] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:50:49] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 65 %
+[2026-09-22 01:50:51] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:50:54] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 65 %
+[2026-09-22 01:50:55] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:50:58] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:50:59] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 65 %
+[2026-09-22 01:51:00] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:51:04] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 64 %
+[2026-09-22 01:51:04] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:51:07] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:51:09] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 64 %
+[2026-09-22 01:51:13] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:51:14] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 65 %
+[2026-09-22 01:51:16] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:51:19] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:51:19] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 65 %
+[2026-09-22 01:51:23] AUTOMÁTICO | LDR | Oscuridad detectada (430) | LED exterior encendido
+[2026-09-22 01:51:23] AUTOMÁTICO | LDR | Oscuridad detectada (449) | LED exterior encendido
+[2026-09-22 01:51:24] AUTOMÁTICO | LDR | LED exterior apagado | Lectura: 622
+[2026-09-22 01:51:24] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 65 %
+[2026-09-22 01:51:29] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 65 %
+[2026-09-22 01:51:34] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 65 %
+[2026-09-22 01:51:38] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:51:39] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 64 %
+[2026-09-22 01:51:42] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:51:44] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 64 %
+[2026-09-22 01:51:49] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 64 %
+[2026-09-22 01:51:50] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:51:55] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 64 %
+[2026-09-22 01:51:58] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:52:00] AUTOMÁTICO | DHT11 | Temperatura: 29 °C | Humedad: 64 %
+[2026-09-22 01:52:01] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:52:05] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:52:10] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:52:11] AUTOMÁTICO | Alarma PIR | Movimiento detectado | Buzzer activado
+[2026-09-22 01:52:15] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:52:16] CONTROL MANUAL | Botón Desactivar alarma presionado
+[2026-09-22 01:52:20] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:52:25] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:52:30] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:52:32] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-22 01:52:35] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:52:36] CONTROL MANUAL | Botón Cerrar ventana presionado (0 grados)
+[2026-09-22 01:52:39] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-22 01:52:40] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:52:40] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-22 01:52:41] CONTROL MANUAL | Botón Cerrar ventana presionado (0 grados)
+[2026-09-22 01:52:42] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-22 01:52:44] CONTROL MANUAL | Botón Cerrar ventana presionado (0 grados)
+[2026-09-22 01:52:45] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:52:49] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-22 01:52:50] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:52:54] CONTROL MANUAL | Botón Cerrar ventana presionado (0 grados)
+[2026-09-22 01:52:55] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:53:00] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:53:01] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-22 01:53:04] CONTROL MANUAL | Botón Cerrar ventana presionado (0 grados)
+[2026-09-22 01:53:05] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[RTC OFFLINE] SISTEMA | Error de comunicación: WriteFile failed (PermissionError(13, 'Access is denied.', None, 5))
+[2026-09-22 01:53:12] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-22 01:53:14] CONTROL MANUAL | Botón Cerrar ventana presionado (0 grados)
+[2026-09-22 01:53:15] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:53:17] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-22 01:53:20] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:53:24] CONTROL MANUAL | Consulta de fecha y hora del RTC
+[2026-09-22 01:53:25] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:53:25] CONTROL MANUAL | Consulta de fecha y hora del RTC
+[2026-09-22 01:53:29] CONTROL MANUAL | Consulta de fecha y hora del RTC
+[2026-09-22 01:53:30] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:53:32] CONTROL MANUAL | Consulta de fecha y hora del RTC
+[2026-09-22 01:53:35] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:53:40] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:53:41] CONTROL MANUAL | Consulta de fecha y hora del RTC
+[RTC OFFLINE] CONTROL MANUAL | Consulta de fecha y hora del RTC
+[2026-09-22 01:53:45] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:53:50] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:53:55] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:54:00] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:54:05] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:54:10] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:54:15] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %
+[2026-09-22 01:54:20] AUTOMÁTICO | DHT11 | Temperatura: 28 °C | Humedad: 64 %

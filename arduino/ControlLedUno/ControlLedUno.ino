@@ -2,6 +2,7 @@
 // DS3231 por I2C: SDA -> A4, SCL -> A5, además de VCC y GND.
 // DHT11: DATA -> D5, además de VCC y GND.
 // Buzzer: señal -> D6. PIR: OUT -> D7, además de VCC y GND.
+// Fotoresistencia: divisor de voltaje -> A0. LED exterior: ánodo -> D9.
 #include <Arduino.h>
 #include <DHT.h>
 #include <RTClib.h>
@@ -31,7 +32,7 @@ void printState() {
 namespace WindowServo {
 constexpr byte kSignalPin = 2;
 constexpr byte kOpenAngle = 89;
-constexpr byte kClosedAngle = 5;
+constexpr byte kClosedAngle = 0;
 constexpr unsigned long kStepIntervalMs = 20;
 Servo motor;
 byte currentAngle = kClosedAngle;
@@ -63,7 +64,7 @@ void update() {
 
 void printState() {
   Serial.println(targetAngle == kOpenAngle ? F("SERVO OPEN 89")
-                                           : F("SERVO CLOSED 5"));
+                                           : F("SERVO CLOSED 0"));
 }
 
 void pausePulses() {
@@ -79,15 +80,31 @@ void resumePulses() {
 namespace DoorMotor {
 constexpr byte kIn1Pin = 3;
 constexpr byte kIn2Pin = 4;
-constexpr unsigned long kQuarterTravelMs = 1000;
+constexpr unsigned long kQuarterTravelMs = 50;
+constexpr unsigned int kPwmPeriodUs = 2000;
+
+constexpr unsigned int kPoweredTimeUs = 300;
 
 enum State : byte { CLOSED, OPEN, OPENING, CLOSING };
 State state = CLOSED;
 unsigned long movementStartedAt = 0;
+unsigned long pwmCycleStartedAt = 0;
 
 void stop() {
   digitalWrite(kIn1Pin, LOW);
   digitalWrite(kIn2Pin, LOW);
+}
+
+void drive(bool powered) {
+  if (!powered) {
+    stop();
+  } else if (state == OPENING) {
+    digitalWrite(kIn1Pin, LOW);
+    digitalWrite(kIn2Pin, HIGH);
+  } else {
+    digitalWrite(kIn1Pin, HIGH);
+    digitalWrite(kIn2Pin, LOW);
+  }
 }
 
 void begin() {
@@ -123,10 +140,10 @@ void open() {
     return;
   }
 
-  digitalWrite(kIn1Pin, LOW);
-  digitalWrite(kIn2Pin, HIGH);
-  movementStartedAt = millis();
   state = OPENING;
+  movementStartedAt = millis();
+  pwmCycleStartedAt = micros();
+  drive(true);
   printState();
 }
 
@@ -140,19 +157,40 @@ void close() {
     return;
   }
 
-  digitalWrite(kIn1Pin, HIGH);
-  digitalWrite(kIn2Pin, LOW);
-  movementStartedAt = millis();
   state = CLOSING;
+  movementStartedAt = millis();
+  pwmCycleStartedAt = micros();
+  drive(true);
   printState();
 }
 
 void update() {
   if (state != OPENING && state != CLOSING) return;
-  if (millis() - movementStartedAt < kQuarterTravelMs) return;
+  if (millis() - movementStartedAt >= kQuarterTravelMs) {
+    stop();
+    state = state == OPENING ? OPEN : CLOSED;
+    return;
+  }
 
-  stop();
-  state = state == OPENING ? OPEN : CLOSED;
+  const unsigned long now = micros();
+  unsigned long elapsed = now - pwmCycleStartedAt;
+  if (elapsed >= kPwmPeriodUs) {
+    pwmCycleStartedAt = now;
+    elapsed = 0;
+  }
+  drive(elapsed < kPoweredTimeUs);
+}
+
+void pausePower() {
+  if (state == OPENING || state == CLOSING) stop();
+}
+
+void resumePower() {
+  if ((state == OPENING || state == CLOSING) &&
+      millis() - movementStartedAt < kQuarterTravelMs) {
+    pwmCycleStartedAt = micros();
+    drive(true);
+  }
 }
 }  // namespace DoorMotor
 
@@ -166,10 +204,12 @@ void begin() {
 
 void printReading() {
   // La librería DHT desactiva interrupciones durante su lectura. Pausar el
-  // pulso del servo evita alargar un pulso y producir un movimiento espurio.
+  // servo y el motor evita pulsos anormalmente largos en ambos actuadores.
   WindowServo::pausePulses();
+  DoorMotor::pausePower();
   const float humidity = sensor.readHumidity();
   const float temperature = sensor.readTemperature();
+  DoorMotor::resumePower();
   WindowServo::resumePulses();
   if (isnan(humidity) || isnan(temperature)) {
     Serial.println(F("DHT OFFLINE"));
@@ -269,7 +309,55 @@ void printState() {
   Serial.println(eventPending ? '1' : '0');
   eventPending = false;
 }
+
+bool isArmed() {
+  return armed;
+}
 }  // namespace SecurityAlarm
+
+namespace AutomaticLight {
+constexpr byte kLedPin = 9;
+constexpr byte kLdrPin = A0;
+constexpr int kDarkThreshold = 500;
+constexpr unsigned long kSampleIntervalMs = 100;
+
+int ldrValue = 0;
+bool ledOn = false;
+bool eventPending = false;
+unsigned long lastSampleAt = 0;
+
+void setLed(bool turnOn) {
+  if (ledOn == turnOn) return;
+  ledOn = turnOn;
+  digitalWrite(kLedPin, ledOn ? HIGH : LOW);
+  eventPending = true;
+}
+
+void begin() {
+  pinMode(kLedPin, OUTPUT);
+  digitalWrite(kLedPin, LOW);
+  ldrValue = analogRead(kLdrPin);
+  lastSampleAt = millis();
+}
+
+void update() {
+  if (!SecurityAlarm::isArmed()) setLed(false);
+
+  const unsigned long now = millis();
+  if (now - lastSampleAt < kSampleIntervalMs) return;
+  lastSampleAt = now;
+  ldrValue = analogRead(kLdrPin);
+  setLed(SecurityAlarm::isArmed() && ldrValue < kDarkThreshold);
+}
+
+void printState() {
+  Serial.print(ledOn ? F("LIGHT ON VALUE ") : F("LIGHT OFF VALUE "));
+  Serial.print(ldrValue);
+  Serial.print(F(" EVENT "));
+  Serial.println(eventPending ? '1' : '0');
+  eventPending = false;
+}
+}  // namespace AutomaticLight
 
 namespace ClockModule {
 constexpr byte kDs3231Address = 0x68;
@@ -397,6 +485,8 @@ void execute(const char *input) {
     SecurityAlarm::printState();
   } else if (strcmp_P(input, PSTR("ALARM STATUS")) == 0) {
     SecurityAlarm::printState();
+  } else if (strcmp_P(input, PSTR("LIGHT STATUS")) == 0) {
+    AutomaticLight::printState();
   } else {
     Serial.println(F("ERR UNKNOWN_COMMAND"));
   }
@@ -426,6 +516,7 @@ void setup() {
   DoorMotor::begin();
   ClimateSensor::begin();
   SecurityAlarm::begin();
+  AutomaticLight::begin();
   ClockModule::begin();
 }
 
@@ -434,4 +525,5 @@ void loop() {
   WindowServo::update();
   DoorMotor::update();
   SecurityAlarm::update();
+  AutomaticLight::update();
 }

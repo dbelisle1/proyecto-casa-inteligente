@@ -5,12 +5,13 @@ La etapa actual controla el LED integrado, una ventana con servomotor y una
 puerta con motor DC mediante L298N. También administra la conexión USB serial y
 permite consultar o ajustar un reloj RTC DS3231 y registra las mediciones de un
 sensor DHT11. También incorpora una alarma con sensor PIR y buzzer. La
-comunicación utiliza pySerial a 9600 baudios; las acciones manuales y las
-mediciones o detecciones automáticas se conservan en `reporte.txt`.
+alarma habilita además iluminación automática mediante una fotoresistencia y
+un LED exterior. La comunicación utiliza pySerial a 9600 baudios; las acciones
+manuales y las mediciones o detecciones automáticas se conservan en
+`reporte.txt`.
 
-El PDF `proyecto2.pdf` también describe como etapas posteriores el encendido
-automático mediante LDR y la bomba de agua. El registro ya está preparado para
-incorporar los eventos automáticos de esas funciones.
+El PDF `proyecto2.pdf` también describe como etapa posterior la bomba de agua.
+El registro ya está preparado para incorporar sus eventos automáticos.
 
 ## Preparar la placa
 
@@ -28,12 +29,14 @@ incorporar los eventos automáticos de esas funciones.
 |---|---|---|---|
 | Comunicación con la computadora | USB | Conector USB (`D0/RX` y `D1/TX` quedan reservados internamente) | Protocolo serial a 9600 baudios |
 | LED integrado | LED `L` de la placa | `D13` / `LED_BUILTIN` | Encendido y apagado manual |
-| Servomotor de la ventana | Señal | `D2` | Posiciones cerrada de 5° y abierta de 89° |
+| Servomotor de la ventana | Señal | `D2` | Posiciones cerrada de 0° y abierta de 89° |
 | Puente H L298N | `IN1` | `D3` | Giro del motor de la puerta en un sentido |
 | Puente H L298N | `IN2` | `D4` | Giro del motor de la puerta en sentido inverso |
 | Sensor DHT11 | `DATA` | `D5` | Lectura de temperatura y humedad |
 | Buzzer pasivo o módulo buzzer | Señal / `SIG` | `D6` | Alarma sonora de 440/523 Hz |
 | Sensor PIR | Salida / `OUT` | `D7` | Detección de movimiento o intrusos |
+| LED exterior | Ánodo mediante resistencia | `D9` | Iluminación automática cuando la alarma está activa |
+| Fotoresistencia LDR | Punto medio del divisor | `A0` | Medición del nivel de luz |
 | Reloj DS3231 | `SDA` | `A4` / `SDA` | Datos del bus I2C |
 | Reloj DS3231 | `SCL` | `A5` / `SCL` | Reloj del bus I2C |
 
@@ -57,7 +60,7 @@ gestor de bibliotecas de Arduino IDE antes de compilar el sketch. La ausencia
 del RTC no detiene el firmware: las funciones restantes continúan operativas.
 
 Para el servomotor conecte la señal al pin digital `D2`. Al arrancar se ordena
-la posición cerrada de 5°; la posición abierta es 89°. Se recomienda alimentar
+la posición cerrada de 0°; la posición abierta es 89°. Se recomienda alimentar
 el servo con una fuente regulada de 5 V adecuada para su consumo y unir el GND
 de esa fuente con el GND del Arduino. Evite alimentar servos de alto consumo
 directamente desde el pin de 5 V del UNO.
@@ -65,10 +68,12 @@ directamente desde el pin de 5 V del UNO.
 Para el L298N conecte `IN1` a `D3`, `IN2` a `D4`, el motor a `OUT1/OUT2` y
 mantenga habilitado `ENA` mediante el jumper del módulo. Alimente el motor con
 una fuente externa adecuada y conecte su GND con el GND del Arduino; no alimente
-el motor desde un pin del UNO. El movimiento dura 1000 ms por sentido, un cuarto
-de los 4000 ms del ejemplo. Sin encoder ni finales de carrera esta posición es
-una estimación temporal, por lo que `kQuarterTravelMs` debe calibrarse con la
-mecánica real. Al reiniciar, el programa supone que la puerta está cerrada.
+el motor desde un pin del UNO. El firmware aplica PWM por software a `IN1/IN2`
+con aproximadamente 15% de potencia durante 50 ms por sentido. Esto suaviza y
+limita el movimiento a un impulso corto. Sin encoder ni finales de carrera esta
+posición sigue siendo una estimación temporal, por lo que `kQuarterTravelMs` y
+`kPoweredTimeUs` deben calibrarse con la mecánica real. Al reiniciar, el programa
+supone que la puerta está cerrada.
 
 Para el DHT11 conecte el pin de datos a `D5`, `VCC` a `5V` y `GND` a `GND`.
 Si utiliza el sensor suelto en lugar de un módulo, coloque una resistencia
@@ -83,6 +88,14 @@ usa `tone()`, por lo que un buzzer pasivo permite escuchar la alternancia entre
 UNO, contrólelo mediante un transistor o un módulo buzzer con entrada de señal.
 Después de energizarlo, deje estabilizar el PIR según las indicaciones de su
 fabricante antes de activar la alarma.
+
+Para la iluminación automática conecte el ánodo del LED a `D9` mediante una
+resistencia de 220 a 330 Ω y el cátodo a `GND`. Forme un divisor con una
+LDR entre `5V` y `A0`, y una resistencia fija de aproximadamente 10 kΩ entre
+`A0` y `GND`. Esta orientación hace que la lectura disminuya en la oscuridad,
+como espera el firmware. El umbral de oscuridad es 500 y puede calibrarse modificando
+`kDarkThreshold`. La automatización queda deshabilitada y el LED permanece
+apagado mientras la alarma esté desactivada.
 
 ## Ejecutar
 
@@ -123,14 +136,16 @@ El script utiliza `.tools/python/python.exe` si está disponible, o el comando
   El mismo evento `report` queda disponible para los eventos automáticos que se
   incorporen en las siguientes etapas.
 - La sección **Ventana · Servomotor** ofrece controles independientes para abrir
-  a 89° y cerrar a 5°. El Arduino responde con la posición ordenada y la acción
+  a 89° y cerrar a 0°. El Arduino responde con la posición ordenada y la acción
   queda registrada con la hora del RTC. El movimiento se realiza gradualmente,
   un grado cada 20 ms (aproximadamente 1.7 s entre ambos extremos), sin bloquear
   la comunicación serial.
 - La sección **Puerta · Motor DC L298N** controla apertura y cierre invirtiendo
-  `IN1/IN2`. El motor se detiene automáticamente después de 1000 ms, sin usar
-  `delay()`, y la aplicación espera la confirmación final antes de habilitar otra
-  acción. Ambas órdenes se guardan en `reporte.txt`.
+  `IN1/IN2`. Un PWM por software de 500 Hz limita la potencia al 15% y evita el
+  arranque como una ráfaga continua a máxima velocidad. El motor se detiene
+  automáticamente después de 50 ms, sin usar `delay()`, y la aplicación espera
+  la confirmación final antes de habilitar otra acción. Ambas órdenes se guardan
+  en `reporte.txt`.
 - La sección **Clima · Sensor DHT11** muestra la última temperatura y humedad.
   Cada cinco segundos agrega a `reporte.txt` una línea `AUTOMÁTICO | DHT11`
   con ambos valores y la hora del DS3231. Si la lectura falla, registra y muestra
@@ -143,6 +158,10 @@ El script utiliza `.tools/python/python.exe` si está disponible, o el comando
   hasta que Python la consulta y se registra una sola vez en `reporte.txt` con
   la hora del RTC. Si se desactiva la alarma durante esos cinco segundos, el
   buzzer se apaga inmediatamente y se cancela el tiempo restante.
+- La sección **Iluminación automática · LDR** muestra la lectura analógica de
+  `A0` y el estado del LED exterior. Con la alarma activa, una lectura inferior
+  a 500 enciende `D9`; una lectura de 500 o más lo apaga. Cada cambio se registra con
+  la hora del RTC. Desactivar la alarma fuerza inmediatamente el LED a apagado.
 - Consulta `STATUS` aproximadamente cada segundo para detectar desconexiones
   y cambios de estado. Estas consultas periódicas no saturan el log.
 - Registra puertos probados, esperas, comandos, respuestas, errores y resultados.
@@ -168,11 +187,12 @@ conectadas; desconecte equipos seriales ajenos durante las pruebas.
    OFFLINE` si el módulo no está conectado.
 6. Pulse **Asignar hora al RTC** y vuelva a consultar: la hora debe coincidir
    aproximadamente con la computadora y la acción debe aparecer en `reporte.txt`.
-7. Pulse **Abrir ventana (89°)** y **Cerrar ventana (5°)**, comprobando ambas
-   posiciones y sus entradas correspondientes en `reporte.txt`.
+7. Pulse **Abrir ventana** y **Cerrar ventana**, comprobando las posiciones de
+   89° y 0° y sus entradas correspondientes en `reporte.txt`.
 8. Con la puerta inicialmente cerrada, pulse **Abrir puerta** y compruebe que el
-   motor gira durante aproximadamente un segundo y se detiene. Pulse **Cerrar
-   puerta** y confirme el giro inverso durante el mismo tiempo.
+   motor gira a velocidad reducida durante aproximadamente 50 ms y se detiene.
+   Pulse **Cerrar puerta** y confirme el giro inverso con la misma velocidad y
+   duración.
 9. Conecte el DHT11 y espere al menos cinco segundos. Compruebe los valores en
    la sección **Clima** y una nueva línea automática en `reporte.txt`. Desconecte
    DATA para verificar que se muestre y registre `DHT11 OFFLINE`.
@@ -181,9 +201,13 @@ conectadas; desconecte equipos seriales ajenos durante las pruebas.
     cinco segundos, el estado mostrado y una sola entrada automática en
     `reporte.txt`. Repita la detección y pulse **Desactivar alarma** antes de
     cinco segundos para confirmar que el sonido se interrumpa inmediatamente.
-11. Desconecte USB: debe mostrar error y estado desconocido. Reconecte y espere
+11. Con la alarma desactivada, cubra la LDR y confirme que el LED exterior siga
+    apagado. Active la alarma, vuelva a cubrirla y compruebe que `D9` se encienda
+    al bajar del umbral. Ilumine la LDR para apagarlo y revise ambos eventos en
+    `reporte.txt`.
+12. Desconecte USB: debe mostrar error y estado desconocido. Reconecte y espere
    la detección automática (cada candidato puede requerir unos cuatro segundos).
-12. Cierre y reabra: el puerto debe quedar disponible.
+13. Cierre y reabra: el puerto debe quedar disponible.
 
 Referencias: [UNO Rev3](https://store.arduino.cc/products/arduino-uno-rev3),
 [enumeración de puertos](https://pyserial.readthedocs.io/en/stable/tools.html),
@@ -193,14 +217,14 @@ Referencias: [UNO Rev3](https://store.arduino.cc/products/arduino-uno-rev3),
 
 - Firmware compilado para `arduino:avr:uno` con RTClib 2.1.4, Adafruit BusIO
   1.17.4, Servo 1.3.0, DHT sensor library 1.4.7 y Adafruit Unified Sensor
-  1.1.15: 13732 bytes de programa y 573 bytes de RAM.
+  1.1.15: 14330 bytes de programa y 585 bytes de RAM.
 - El firmware evita enlazar `scanf`, `printf` y `snprintf`: RTClib construye y
   valida la fecha ISO, mientras que la salida usa impresiones numéricas directas.
   El búfer serial se redujo de 48 a 32 bytes.
-- Veintitrés pruebas aprobadas, incluidas lectura y ajuste del RTC, `RTC OFFLINE`,
+- Veinticinco pruebas aprobadas, incluidas lectura y ajuste del RTC, `RTC OFFLINE`,
   servo, control no bloqueante de la puerta, DHT11, intervalo automático de
-  cinco segundos, alarma PIR, controles, eventos automáticos y reporte
-  persistente.
+  cinco segundos, alarma PIR, iluminación LDR condicionada por la alarma,
+  controles, eventos automáticos y reporte persistente.
 - Ejecutar pruebas: `.\.venv\Scripts\python.exe -m unittest -v`.
 - No se cargó firmware ni se realizaron pruebas físicas durante esta
   actualización.

@@ -69,6 +69,9 @@ GND -> GND compartido con el Arduino
 El sketch también utiliza la biblioteca oficial "Servo". Si Arduino IDE no la
 encuentra al compilar, instalarla desde el gestor de bibliotecas.
 
+Posición abierta -> 89 grados
+Posición cerrada -> 0 grados
+
 Para el módulo L298N y el motor DC:
 
 IN1 -> D3
@@ -78,7 +81,10 @@ ENA -> jumper de habilitación colocado
 GND de la fuente del motor -> GND del Arduino
 
 Usar una fuente externa adecuada para el motor. El tiempo de recorrido se
-calibra con kQuarterTravelMs en el sketch; su valor inicial es 1000 ms.
+calibra con kQuarterTravelMs en el sketch; su valor actual es 50 ms. La
+potencia se limita aproximadamente al 15% mediante PWM por software. Ajustar
+kPoweredTimeUs si el motor necesita más o menos velocidad, manteniendo
+kPwmPeriodUs en un valor mayor que kPoweredTimeUs.
 
 Para el sensor DHT11 (requiere "DHT sensor library by Adafruit" y
 "Adafruit Unified Sensor"):
@@ -101,6 +107,18 @@ El firmware usa tone() con 440 y 523 Hz, pensado para un buzzer pasivo. Si el
 buzzer consume más corriente que la permitida por un pin del Arduino, usar un
 transistor o un módulo buzzer con entrada de señal. Cada detección produce cinco
 segundos de sonido; desactivar la alarma interrumpe el buzzer inmediatamente.
+
+Para la iluminación automática controlada por la alarma:
+
+Ánodo del LED -> resistencia de 220 a 330 ohmios -> D9
+Cátodo del LED -> GND
+5V -> fotoresistencia LDR -> A0
+A0 -> resistencia fija de aproximadamente 10 kohmios -> GND
+
+Con este divisor la lectura disminuye al oscurecer. El LED se enciende con una
+lectura menor que 500; el umbral se
+configura con kDarkThreshold en el sketch. El LED siempre permanece apagado si
+la alarma está desactivada.
 
 Luego cerrar el Monitor Serial y el Serial Plotter de Arduino IDE para dejar
 libre el puerto USB.
