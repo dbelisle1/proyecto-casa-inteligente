@@ -60,5 +60,14 @@ SCL -> A5
 VCC -> 5V
 GND -> GND
 
+Para el servomotor:
+
+Señal -> D2
+VCC -> fuente regulada de 5V adecuada para el servo
+GND -> GND compartido con el Arduino
+
+El sketch también utiliza la biblioteca oficial "Servo". Si Arduino IDE no la
+encuentra al compilar, instalarla desde el gestor de bibliotecas.
+
 Luego cerrar el Monitor Serial y el Serial Plotter de Arduino IDE para dejar
 libre el puerto USB.

@@ -1,9 +1,10 @@
 # Casa inteligente con Arduino UNO
 
 Interfaz de escritorio Python (Tkinter) para el proyecto de casa inteligente.
-La etapa actual controla el LED integrado, administra la conexión USB serial y
-permite consultar o ajustar un reloj RTC DS3231. La comunicación utiliza
-pySerial a 9600 baudios y cada acción manual se conserva en `reporte.txt`.
+La etapa actual controla el LED integrado y una ventana con servomotor,
+administra la conexión USB serial y permite consultar o ajustar un reloj RTC
+DS3231. La comunicación utiliza pySerial a 9600 baudios y cada acción manual se
+conserva en `reporte.txt`.
 
 El PDF `proyecto2.pdf` también describe etapas posteriores: puerta, ventana,
 DHT11, alarma y bomba de agua. El registro ya está preparado para incorporar
@@ -26,6 +27,12 @@ Para el reloj DS3231 conecte `SDA` a `A4`, `SCL` a `A5`, además de `VCC` y
 `GND`. Instale la biblioteca **RTClib de Adafruit** y sus dependencias desde el
 gestor de bibliotecas de Arduino IDE antes de compilar el sketch. La ausencia
 del RTC no detiene el firmware: las funciones restantes continúan operativas.
+
+Para el servomotor conecte la señal al pin digital `D2`. Al arrancar se ordena
+la posición cerrada de 5°; la posición abierta es 89°. Se recomienda alimentar
+el servo con una fuente regulada de 5 V adecuada para su consumo y unir el GND
+de esa fuente con el GND del Arduino. Evite alimentar servos de alto consumo
+directamente desde el pin de 5 V del UNO.
 
 ## Ejecutar
 
@@ -65,6 +72,11 @@ El script utiliza `.tools/python/python.exe` si está disponible, o el comando
 - Cada acción manual se agrega a `reporte.txt` con la hora obtenida del DS3231.
   El mismo evento `report` queda disponible para los eventos automáticos que se
   incorporen en las siguientes etapas.
+- La sección **Ventana · Servomotor** ofrece controles independientes para abrir
+  a 89° y cerrar a 5°. El Arduino responde con la posición ordenada y la acción
+  queda registrada con la hora del RTC. El movimiento se realiza gradualmente,
+  un grado cada 20 ms (aproximadamente 1.7 s entre ambos extremos), sin bloquear
+  la comunicación serial.
 - Consulta `STATUS` aproximadamente cada segundo para detectar desconexiones
   y cambios de estado. Estas consultas periódicas no saturan el log.
 - Registra puertos probados, esperas, comandos, respuestas, errores y resultados.
@@ -90,9 +102,11 @@ conectadas; desconecte equipos seriales ajenos durante las pruebas.
    OFFLINE` si el módulo no está conectado.
 6. Pulse **Asignar hora al RTC** y vuelva a consultar: la hora debe coincidir
    aproximadamente con la computadora y la acción debe aparecer en `reporte.txt`.
-7. Desconecte USB: debe mostrar error y estado desconocido. Reconecte y espere
+7. Pulse **Abrir ventana (89°)** y **Cerrar ventana (5°)**, comprobando ambas
+   posiciones y sus entradas correspondientes en `reporte.txt`.
+8. Desconecte USB: debe mostrar error y estado desconocido. Reconecte y espere
    la detección automática (cada candidato puede requerir unos cuatro segundos).
-8. Cierre y reabra: el puerto debe quedar disponible.
+9. Cierre y reabra: el puerto debe quedar disponible.
 
 Referencias: [UNO Rev3](https://store.arduino.cc/products/arduino-uno-rev3),
 [enumeración de puertos](https://pyserial.readthedocs.io/en/stable/tools.html),
@@ -100,10 +114,13 @@ Referencias: [UNO Rev3](https://store.arduino.cc/products/arduino-uno-rev3),
 
 ## Validación realizada
 
-- Firmware compilado para `arduino:avr:uno` con RTClib 2.1.4 y Adafruit BusIO
-  1.17.4: 10608 bytes de programa y 568 bytes de RAM.
-- Doce pruebas aprobadas, incluidas lectura y ajuste del RTC, `RTC OFFLINE`,
-  botones de la interfaz y escritura persistente de `reporte.txt`.
+- Firmware compilado para `arduino:avr:uno` con RTClib 2.1.4, Adafruit BusIO
+  1.17.4 y Servo 1.3.0: 8670 bytes de programa y 597 bytes de RAM.
+- El firmware evita enlazar `scanf`, `printf` y `snprintf`: RTClib construye y
+  valida la fecha ISO, mientras que la salida usa impresiones numéricas directas.
+  El búfer serial se redujo de 48 a 32 bytes.
+- Catorce pruebas aprobadas, incluidas lectura y ajuste del RTC, `RTC OFFLINE`,
+  las dos posiciones del servo, botones y escritura persistente del reporte.
 - Ejecutar pruebas: `.\.venv\Scripts\python.exe -m unittest -v`.
 - No se cargó firmware ni se verificó el LED físico: el UNO todavía no estaba
   conectado durante la preparación.

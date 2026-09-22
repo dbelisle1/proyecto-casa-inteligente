@@ -98,6 +98,18 @@ class ArduinoWorker(threading.Thread):
     def query_rtc(self, verbose=True):
         return self.exchange("RTC GET", accepted_prefixes=("RTC ",), verbose=verbose)
 
+    def query_servo(self, verbose=True):
+        return self.exchange(
+            "SERVO STATUS", {"SERVO OPEN 89", "SERVO CLOSED 5"}, verbose=verbose
+        )
+
+    def servo_for_connection(self):
+        try:
+            return self.query_servo(verbose=False)
+        except (OSError, serial.SerialException) as error:
+            self.log(f"No se pudo consultar la posición del servomotor: {error}")
+            return None
+
     def rtc_for_report(self):
         if self.connection is None:
             return "RTC OFFLINE"
@@ -169,9 +181,15 @@ class ArduinoWorker(threading.Thread):
                 self.exchange("CASA_HELLO_V1", {"CASA_UNO_LED_V1"})
                 state = self.exchange("STATUS", {"LED 0", "LED 1"})
                 rtc_state = self.rtc_for_report()
+                servo_state = self.servo_for_connection()
                 self.log(f"Arduino identificado en {port.device}; estado inicial confirmado.")
                 self.remember_port(port.device)
-                self.events.put(("connected", (port.device, state == "LED 1", rtc_state)))
+                self.events.put(
+                    (
+                        "connected",
+                        (port.device, state == "LED 1", rtc_state, servo_state),
+                    )
+                )
                 return True
             except (OSError, serial.SerialException) as error:
                 self.log(f"ERROR en {port.device}: {error}")
@@ -225,8 +243,9 @@ class ArduinoWorker(threading.Thread):
                             self.events.put(("rtc_done", rtc_answer))
                         elif action == "rtc_set":
                             report_message = f"CONTROL MANUAL | Asignación de hora al RTC: {value}"
+                            wire_value = value.replace(" ", "T", 1)
                             rtc_answer = self.exchange(
-                                f"RTC SET {value}", accepted_prefixes=("RTC ",)
+                                f"RTC SET {wire_value}", accepted_prefixes=("RTC ",)
                             )
                             if rtc_answer == "RTC OFFLINE":
                                 self.log("No se pudo asignar la hora: RTC OFFLINE")
@@ -235,6 +254,22 @@ class ArduinoWorker(threading.Thread):
                             else:
                                 self.log(f"Hora del RTC asignada correctamente: {rtc_timestamp(rtc_answer)}")
                             self.events.put(("rtc_done", rtc_answer))
+                        elif action == "servo":
+                            open_window = bool(value)
+                            report_message = (
+                                "CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)"
+                                if open_window
+                                else "CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)"
+                            )
+                            rtc_answer = self.rtc_for_report()
+                            command = "SERVO OPEN" if open_window else "SERVO CLOSE"
+                            expected = "SERVO OPEN 89" if open_window else "SERVO CLOSED 5"
+                            self.log(
+                                f"Acción: {'abrir' if open_window else 'cerrar'} la ventana con el servomotor."
+                            )
+                            self.exchange(command, {expected})
+                            self.log(f"Posición confirmada por el Arduino: {expected}")
+                            self.events.put(("servo_done", open_window))
                         else:
                             self.log(f"ERROR: acción interna desconocida: {action}")
                     finally:
@@ -253,8 +288,8 @@ class App(tk.Tk):
     def __init__(self, report_path=REPORT_FILE):
         super().__init__()
         self.title("Casa inteligente · Arduino UNO")
-        self.geometry("780x610")
-        self.minsize(640, 480)
+        self.geometry("780x700")
+        self.minsize(640, 560)
         self.report_path = Path(report_path)
         self.events, self.commands = queue.Queue(), queue.Queue()
         self.stop = threading.Event()
@@ -263,6 +298,7 @@ class App(tk.Tk):
         self.busy = False
         self.busy_action = None
         self.led_on = False
+        self.window_open = None
         self.closing = False
         frame = ttk.Frame(self, padding=20)
         frame.pack(fill="both", expand=True)
@@ -291,8 +327,22 @@ class App(tk.Tk):
             rtc_button_row, text="Mostrar datos del RTC", command=self.read_rtc, state="disabled"
         )
         self.rtc_read_button.pack(side="left", padx=(8, 0))
+        ttk.Separator(frame).pack(fill="x", pady=(4, 12))
+        ttk.Label(frame, text="Ventana · Servomotor", font=("Segoe UI", 12, "bold")).pack(anchor="w")
+        self.servo_label = ttk.Label(frame, text="Ventana: posición desconocida")
+        self.servo_label.pack(anchor="w", pady=(4, 0))
+        servo_button_row = ttk.Frame(frame)
+        servo_button_row.pack(anchor="w", pady=10)
+        self.servo_open_button = ttk.Button(
+            servo_button_row, text="Abrir ventana (89°)", command=self.open_window, state="disabled"
+        )
+        self.servo_open_button.pack(side="left")
+        self.servo_close_button = ttk.Button(
+            servo_button_row, text="Cerrar ventana (5°)", command=self.close_window, state="disabled"
+        )
+        self.servo_close_button.pack(side="left", padx=(8, 0))
         ttk.Label(frame, text="Registro de ejecución y errores").pack(anchor="w")
-        self.log_box = ScrolledText(frame, height=12, state="disabled", wrap="word", font=("Consolas", 10))
+        self.log_box = ScrolledText(frame, height=10, state="disabled", wrap="word", font=("Consolas", 10))
         self.log_box.pack(fill="both", expand=True, pady=(6, 0))
         self.worker = ArduinoWorker(self.events, self.commands, self.stop, rescan=self.rescan)
         self.worker.start()
@@ -317,6 +367,14 @@ class App(tk.Tk):
         rtc_button_state = "normal" if self.connected and not self.busy else "disabled"
         self.rtc_set_button.configure(state=rtc_button_state)
         self.rtc_read_button.configure(state=rtc_button_state)
+        if self.connected and self.window_open is not None:
+            servo_text = "Ventana: ABIERTA (89°)" if self.window_open else "Ventana: CERRADA (5°)"
+        else:
+            servo_text = "Ventana: posición desconocida"
+        self.servo_label.configure(text=servo_text)
+        servo_button_state = "normal" if self.connected and not self.busy else "disabled"
+        self.servo_open_button.configure(state=servo_button_state)
+        self.servo_close_button.configure(state=servo_button_state)
 
     def toggle(self):
         if self.connected and not self.busy:
@@ -339,6 +397,21 @@ class App(tk.Tk):
             self.append_log("Acción: solicitar los datos actuales del módulo RTC.")
             self.commands.put(("rtc_get", None))
             self.render()
+
+    def set_window(self, open_window):
+        if self.connected and not self.busy:
+            self.busy, self.busy_action = True, "servo"
+            position = 89 if open_window else 5
+            action = "abrir" if open_window else "cerrar"
+            self.append_log(f"Acción: {action} la ventana; posición solicitada: {position}°.")
+            self.commands.put(("servo", open_window))
+            self.render()
+
+    def open_window(self):
+        self.set_window(True)
+
+    def close_window(self):
+        self.set_window(False)
 
     def rediscover(self):
         if self.closing:
@@ -365,12 +438,18 @@ class App(tk.Tk):
                 except OSError as error:
                     self.append_log(f"ERROR al escribir {self.report_path.name}: {error}")
             elif kind == "connected":
-                port, self.led_on, rtc_answer = value
+                port, self.led_on, rtc_answer, servo_answer = value
                 self.connected, self.busy, self.busy_action = True, False, None
+                self.window_open = (
+                    True
+                    if servo_answer == "SERVO OPEN 89"
+                    else False if servo_answer == "SERVO CLOSED 5" else None
+                )
                 self.connection_label.configure(text=f"Conectado: Arduino UNO · {port} · 9600 baudios")
                 self.rtc_label.configure(text=f"RTC: {rtc_timestamp(rtc_answer)}")
             elif kind == "disconnected":
                 self.connected, self.busy, self.busy_action = False, False, None
+                self.window_open = None
                 self.connection_label.configure(text="Sin conexión · búsqueda automática activa")
                 self.rtc_label.configure(text="RTC: estado desconocido")
             elif kind in ("done", "state"):
@@ -380,6 +459,9 @@ class App(tk.Tk):
             elif kind == "rtc_done":
                 self.busy, self.busy_action = False, None
                 self.rtc_label.configure(text=f"RTC: {rtc_timestamp(value)}")
+            elif kind == "servo_done":
+                self.busy, self.busy_action = False, None
+                self.window_open = value
             self.render()
         if not self.closing:
             self.after(100, self.process_events)
@@ -390,6 +472,8 @@ class App(tk.Tk):
         self.search_button.configure(state="disabled")
         self.rtc_set_button.configure(state="disabled")
         self.rtc_read_button.configure(state="disabled")
+        self.servo_open_button.configure(state="disabled")
+        self.servo_close_button.configure(state="disabled")
         self.stop.set()
         self.append_log("Cerrando comunicación serial...")
         self.wait_for_worker()

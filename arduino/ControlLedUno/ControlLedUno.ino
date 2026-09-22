@@ -2,8 +2,8 @@
 // DS3231 por I2C: SDA -> A4, SCL -> A5, además de VCC y GND.
 #include <Arduino.h>
 #include <RTClib.h>
+#include <Servo.h>
 #include <Wire.h>
-#include <stdio.h>
 #include <string.h>
 
 namespace BuiltInLed {
@@ -24,6 +24,45 @@ void printState() {
 }
 }  // namespace BuiltInLed
 
+namespace WindowServo {
+constexpr byte kSignalPin = 2;
+constexpr byte kOpenAngle = 89;
+constexpr byte kClosedAngle = 5;
+constexpr unsigned long kStepIntervalMs = 20;
+Servo motor;
+byte currentAngle = kClosedAngle;
+byte targetAngle = kClosedAngle;
+unsigned long lastStepAt = 0;
+
+void begin() {
+  motor.attach(kSignalPin);
+  motor.write(kClosedAngle);
+  currentAngle = kClosedAngle;
+  targetAngle = kClosedAngle;
+  lastStepAt = millis();
+}
+
+void setOpen(bool openWindow) {
+  targetAngle = openWindow ? kOpenAngle : kClosedAngle;
+}
+
+void update() {
+  if (currentAngle == targetAngle) return;
+
+  const unsigned long now = millis();
+  if (now - lastStepAt < kStepIntervalMs) return;
+  lastStepAt = now;
+
+  currentAngle += currentAngle < targetAngle ? 1 : -1;
+  motor.write(currentAngle);
+}
+
+void printState() {
+  Serial.println(targetAngle == kOpenAngle ? F("SERVO OPEN 89")
+                                           : F("SERVO CLOSED 5"));
+}
+}  // namespace WindowServo
+
 namespace ClockModule {
 constexpr byte kDs3231Address = 0x68;
 RTC_DS3231 rtc;
@@ -35,16 +74,15 @@ bool respondsOnI2c() {
 }
 
 bool ensureAvailable() {
-  if (!respondsOnI2c()) {
-    initialized = false;
-    return false;
+  if (!initialized) {
+    initialized = rtc.begin();
+    return initialized;
   }
-  if (!initialized) initialized = rtc.begin();
+  if (!respondsOnI2c()) initialized = false;
   return initialized;
 }
 
 void begin() {
-  Wire.begin();
   initialized = rtc.begin();
 }
 
@@ -56,13 +94,25 @@ void printUnset() {
   Serial.println(F("RTC UNSET"));
 }
 
+void printTwoDigits(byte value) {
+  if (value < 10) Serial.write('0');
+  Serial.print(value);
+}
+
 void printDateTime(const DateTime &value) {
-  char output[20];
-  snprintf(output, sizeof(output), "%04u-%02u-%02u %02u:%02u:%02u",
-           value.year(), value.month(), value.day(), value.hour(),
-           value.minute(), value.second());
   Serial.print(F("RTC "));
-  Serial.println(output);
+  Serial.print(value.year());
+  Serial.write('-');
+  printTwoDigits(value.month());
+  Serial.write('-');
+  printTwoDigits(value.day());
+  Serial.write(' ');
+  printTwoDigits(value.hour());
+  Serial.write(':');
+  printTwoDigits(value.minute());
+  Serial.write(':');
+  printTwoDigits(value.second());
+  Serial.println();
 }
 
 void printCurrent() {
@@ -76,28 +126,7 @@ void printCurrent() {
   }
 
   const DateTime now = rtc.now();
-  if (!now.isValid()) {
-    printUnset();
-    return;
-  }
   printDateTime(now);
-}
-
-bool parseDateTime(const char *text, DateTime &result) {
-  unsigned int year, month, day, hour, minute, second;
-  char trailing;
-  const int fields = sscanf(text, "%u-%u-%u %u:%u:%u%c", &year, &month,
-                            &day, &hour, &minute, &second, &trailing);
-  if (fields != 6 || year < 2000 || year > 2099 || month < 1 ||
-      month > 12 || day < 1 || day > 31 || hour > 23 || minute > 59 ||
-      second > 59) {
-    return false;
-  }
-
-  const DateTime candidate(year, month, day, hour, minute, second);
-  if (!candidate.isValid()) return false;
-  result = candidate;
-  return true;
 }
 
 void setFromText(const char *text) {
@@ -106,19 +135,19 @@ void setFromText(const char *text) {
     return;
   }
 
-  DateTime requested;
-  if (!parseDateTime(text, requested)) {
+  const DateTime requested(text);
+  if (!requested.isValid()) {
     Serial.println(F("ERR RTC_BAD_DATETIME"));
     return;
   }
 
   rtc.adjust(requested);
-  printCurrent();
+  printDateTime(requested);
 }
 }  // namespace ClockModule
 
 namespace SerialProtocol {
-constexpr byte kCommandCapacity = 48;
+constexpr byte kCommandCapacity = 32;
 char command[kCommandCapacity];
 byte used = 0;
 bool overflow = false;
@@ -135,6 +164,14 @@ void execute(const char *input) {
     ClockModule::printCurrent();
   } else if (strncmp(input, "RTC SET ", 8) == 0) {
     ClockModule::setFromText(input + 8);
+  } else if (strcmp(input, "SERVO OPEN") == 0) {
+    WindowServo::setOpen(true);
+    WindowServo::printState();
+  } else if (strcmp(input, "SERVO CLOSE") == 0) {
+    WindowServo::setOpen(false);
+    WindowServo::printState();
+  } else if (strcmp(input, "SERVO STATUS") == 0) {
+    WindowServo::printState();
   } else {
     Serial.println(F("ERR UNKNOWN_COMMAND"));
   }
@@ -160,9 +197,11 @@ void poll() {
 void setup() {
   Serial.begin(9600);
   BuiltInLed::begin();
+  WindowServo::begin();
   ClockModule::begin();
 }
 
 void loop() {
   SerialProtocol::poll();
+  WindowServo::update();
 }

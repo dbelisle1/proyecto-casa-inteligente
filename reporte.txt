@@ -1,0 +1,128 @@
+REPORTE DE EVENTOS - CASA INTELIGENTE
+Formato: [fecha y hora del RTC] TIPO | descripcion
+
+[RTC SIN CONFIGURAR] CONTROL MANUAL | Botón Encender LED presionado
+[2026-09-21 21:36:17] CONTROL MANUAL | Asignación de hora al RTC: 2026-09-21 21:36:17
+[2026-09-21 21:36:21] CONTROL MANUAL | Botón Apagar LED presionado
+[RTC OFFLINE] CONTROL MANUAL | Botón Encender LED presionado
+[RTC OFFLINE] CONTROL MANUAL | Botón Apagar LED presionado
+[2026-09-21 21:36:40] CONTROL MANUAL | Botón Encender LED presionado
+[2026-09-21 21:36:41] CONTROL MANUAL | Botón Apagar LED presionado
+[RTC OFFLINE] SISTEMA | Error de comunicación: WriteFile failed (PermissionError(13, 'Access is denied.', None, 5))
+[2026-09-21 21:40:34] CONTROL MANUAL | Botón Encender LED presionado
+[2026-09-21 21:40:35] CONTROL MANUAL | Botón Apagar LED presionado
+[2026-09-21 21:40:42] CONTROL MANUAL | Consulta de fecha y hora del RTC
+[2026-09-21 22:01:46] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 22:01:48] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:01:50] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 22:01:51] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:01:53] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 22:01:54] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:01:55] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 22:01:56] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:01:56] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 22:01:57] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:01:57] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 22:01:57] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:01:58] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:01:58] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 22:01:59] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:01:59] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:01:59] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:02:00] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 22:02:01] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:02:01] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:02:02] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 22:02:02] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:02:03] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 22:02:04] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:02:04] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:02:05] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 22:02:05] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:02:05] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 22:02:06] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:02:42] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 22:02:43] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:02:45] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 22:02:46] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:06:54] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 22:06:55] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:06:57] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 22:07:01] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:07:10] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 22:07:11] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:07:13] CONTROL MANUAL | Botón Encender LED presionado
+[RTC OFFLINE] CONTROL MANUAL | Botón Apagar LED presionado
+[RTC OFFLINE] SISTEMA | Error de comunicación: Sin confirmación válida para 'LED 0' (2 s).
+[2026-09-21 22:07:37] CONTROL MANUAL | Botón Encender LED presionado
+[RTC OFFLINE] CONTROL MANUAL | Botón Apagar LED presionado
+[RTC OFFLINE] SISTEMA | Error de comunicación: Sin confirmación válida para 'LED 0' (2 s).
+[RTC OFFLINE] SISTEMA | Error de comunicación: WriteFile failed (PermissionError(13, 'Access is denied.', None, 5))
+[2026-09-21 22:08:44] CONTROL MANUAL | Botón Encender LED presionado
+[RTC OFFLINE] CONTROL MANUAL | Consulta de fecha y hora del RTC
+[RTC OFFLINE] SISTEMA | Error de comunicación: Sin confirmación válida para 'RTC GET' (2 s).
+[2026-09-21 22:08:54] CONTROL MANUAL | Consulta de fecha y hora del RTC
+[2026-09-21 22:08:55] CONTROL MANUAL | Consulta de fecha y hora del RTC
+[2026-09-21 22:08:56] CONTROL MANUAL | Consulta de fecha y hora del RTC
+[2026-09-21 22:08:57] CONTROL MANUAL | Botón Encender LED presionado
+[RTC OFFLINE] CONTROL MANUAL | Botón Apagar LED presionado
+[RTC OFFLINE] SISTEMA | Error de comunicación: Sin confirmación válida para 'LED 0' (2 s).
+[2026-09-21 22:09:08] CONTROL MANUAL | Botón Encender LED presionado
+[RTC OFFLINE] CONTROL MANUAL | Botón Apagar LED presionado
+[RTC OFFLINE] SISTEMA | Error de comunicación: Sin confirmación válida para 'LED 0' (2 s).
+[2026-09-21 22:09:18] CONTROL MANUAL | Botón Encender LED presionado
+[RTC OFFLINE] CONTROL MANUAL | Botón Apagar LED presionado
+[RTC OFFLINE] SISTEMA | Error de comunicación: Sin confirmación válida para 'LED 0' (2 s).
+[2026-09-21 22:09:30] CONTROL MANUAL | Botón Encender LED presionado
+[RTC OFFLINE] CONTROL MANUAL | Botón Apagar LED presionado
+[RTC OFFLINE] SISTEMA | Error de comunicación: Sin confirmación válida para 'LED 0' (2 s).
+[2026-09-21 22:10:07] CONTROL MANUAL | Botón Encender LED presionado
+[RTC OFFLINE] CONTROL MANUAL | Botón Apagar LED presionado
+[RTC OFFLINE] SISTEMA | Error de comunicación: Sin confirmación válida para 'LED 0' (2 s).
+[RTC OFFLINE] SISTEMA | Error de comunicación: WriteFile failed (PermissionError(13, 'Access is denied.', None, 5))
+[2026-09-21 22:11:08] CONTROL MANUAL | Botón Encender LED presionado
+[RTC OFFLINE] CONTROL MANUAL | Botón Apagar LED presionado
+[RTC OFFLINE] SISTEMA | Error de comunicación: Sin confirmación válida para 'LED 0' (2 s).
+[2026-09-21 22:11:37] CONTROL MANUAL | Botón Encender LED presionado
+[RTC OFFLINE] CONTROL MANUAL | Botón Apagar LED presionado
+[RTC OFFLINE] SISTEMA | Error de comunicación: Sin confirmación válida para 'LED 0' (2 s).
+[2026-09-21 22:11:53] CONTROL MANUAL | Botón Encender LED presionado
+[RTC OFFLINE] CONTROL MANUAL | Botón Apagar LED presionado
+[RTC OFFLINE] SISTEMA | Error de comunicación: Sin confirmación válida para 'LED 0' (2 s).
+[2026-09-21 22:12:06] CONTROL MANUAL | Botón Encender LED presionado
+[RTC OFFLINE] CONTROL MANUAL | Botón Apagar LED presionado
+[RTC OFFLINE] SISTEMA | Error de comunicación: Sin confirmación válida para 'LED 0' (2 s).
+[2026-09-21 22:12:26] CONTROL MANUAL | Botón Encender LED presionado
+[RTC OFFLINE] CONTROL MANUAL | Botón Apagar LED presionado
+[RTC OFFLINE] SISTEMA | Error de comunicación: Sin confirmación válida para 'LED 0' (2 s).
+[2026-09-21 22:13:40] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:13:48] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 22:14:02] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 22:14:03] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:14:05] CONTROL MANUAL | Botón Encender LED presionado
+[RTC OFFLINE] SISTEMA | Error de comunicación: WriteFile failed (PermissionError(13, 'Access is denied.', None, 5))
+[2026-09-21 22:14:52] CONTROL MANUAL | Botón Encender LED presionado
+[2026-09-21 22:14:53] CONTROL MANUAL | Botón Apagar LED presionado
+[2026-09-21 22:14:54] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 22:14:55] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[RTC OFFLINE] SISTEMA | Error de comunicación: WriteFile failed (PermissionError(13, 'Access is denied.', None, 5))
+[2026-09-21 22:15:32] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:15:34] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 22:15:35] CONTROL MANUAL | Botón Encender LED presionado
+[2026-09-21 22:15:37] CONTROL MANUAL | Botón Apagar LED presionado
+[2026-09-21 22:15:41] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:15:41] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 22:15:42] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[RTC OFFLINE] SISTEMA | Error de comunicación: WriteFile failed (PermissionError(13, 'Access is denied.', None, 5))
+[2026-09-21 22:19:41] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 22:19:43] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[RTC OFFLINE] SISTEMA | Error de comunicación: WriteFile failed (PermissionError(13, 'Access is denied.', None, 5))
+[2026-09-21 22:27:27] CONTROL MANUAL | Botón Encender LED presionado
+[2026-09-21 22:27:28] CONTROL MANUAL | Botón Apagar LED presionado
+[2026-09-21 22:27:36] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 22:27:39] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:27:41] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 22:27:41] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:27:43] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 22:27:45] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[RTC OFFLINE] SISTEMA | Error de comunicación: WriteFile failed (PermissionError(13, 'Access is denied.', None, 5))

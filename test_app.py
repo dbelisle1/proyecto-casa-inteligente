@@ -17,6 +17,7 @@ class FakePort:
         self.answer = b""
         self.closed = False
         self.led = False
+        self.servo_open = False
         self.rtc_online = True
         self.rtc_value = "2026-09-21 20:30:45"
 
@@ -31,10 +32,23 @@ class FakePort:
             self.answer = f"RTC {self.rtc_value}\n".encode() if self.rtc_online else b"RTC OFFLINE\n"
         elif command.startswith(b"RTC SET "):
             if self.rtc_online:
-                self.rtc_value = command.decode("ascii").removeprefix("RTC SET ").strip()
+                self.rtc_value = (
+                    command.decode("ascii")
+                    .removeprefix("RTC SET ")
+                    .strip()
+                    .replace("T", " ", 1)
+                )
                 self.answer = f"RTC {self.rtc_value}\n".encode()
             else:
                 self.answer = b"RTC OFFLINE\n"
+        elif command == b"SERVO OPEN\n":
+            self.servo_open = True
+            self.answer = b"SERVO OPEN 89\n"
+        elif command == b"SERVO CLOSE\n":
+            self.servo_open = False
+            self.answer = b"SERVO CLOSED 5\n"
+        elif command == b"SERVO STATUS\n":
+            self.answer = b"SERVO OPEN 89\n" if self.servo_open else b"SERVO CLOSED 5\n"
         else:
             self.answer = replies.get(command, b"LED 1\n" if self.led else b"LED 0\n")
 
@@ -63,7 +77,13 @@ class ProtocolTests(unittest.TestCase):
         with patch("app.list_ports.comports", return_value=ports), patch("app.serial.Serial", side_effect=[serial.SerialException("ocupado"), good]), patch.object(self.worker.stop, "wait", return_value=False):
             self.assertTrue(self.worker.discover())
         events = list(self.worker.events.queue)
-        self.assertIn(("connected", ("COM4", False, "RTC 2026-09-21 20:30:45")), events)
+        self.assertIn(
+            (
+                "connected",
+                ("COM4", False, "RTC 2026-09-21 20:30:45", "SERVO CLOSED 5"),
+            ),
+            events,
+        )
         self.assertTrue(any("ocupado" in str(event) for event in events))
         variables = json.loads(self.variables_path.read_text(encoding="utf-8"))
         self.assertEqual(variables["ultimo_puerto_arduino"], "COM4")
@@ -92,13 +112,26 @@ class ProtocolTests(unittest.TestCase):
         self.worker.connection = port
         self.assertEqual(self.worker.query_rtc(), "RTC 2026-09-21 20:30:45")
         answer = self.worker.exchange(
-            "RTC SET 2026-10-01 08:09:10", accepted_prefixes=("RTC ",)
+            "RTC SET 2026-10-01T08:09:10", accepted_prefixes=("RTC ",)
         )
         self.assertEqual(answer, "RTC 2026-10-01 08:09:10")
         port.rtc_online = False
         self.assertEqual(self.worker.query_rtc(), "RTC OFFLINE")
         self.assertEqual(rtc_timestamp("RTC OFFLINE"), RTC_OFFLINE)
         self.assertEqual(rtc_timestamp("RTC UNSET"), RTC_UNSET)
+
+    def test_servo_accepts_only_the_two_configured_positions(self):
+        self.worker.connection = FakePort()
+        self.assertEqual(self.worker.query_servo(), "SERVO CLOSED 5")
+        self.assertEqual(
+            self.worker.exchange("SERVO OPEN", {"SERVO OPEN 89"}),
+            "SERVO OPEN 89",
+        )
+        self.assertEqual(self.worker.query_servo(), "SERVO OPEN 89")
+        self.assertEqual(
+            self.worker.exchange("SERVO CLOSE", {"SERVO CLOSED 5"}),
+            "SERVO CLOSED 5",
+        )
 
     def test_wrong_firmware_rejected_and_port_closed(self):
         port = FakePort()
@@ -132,11 +165,15 @@ class ProtocolTests(unittest.TestCase):
         try:
             app.withdraw()
             self.assertIn("disabled", app.button.state())
-            app.events.put(("connected", ("COM4", False, "RTC OFFLINE")))
+            app.events.put(
+                ("connected", ("COM4", False, "RTC OFFLINE", "SERVO CLOSED 5"))
+            )
             app.process_events()
             self.assertNotIn("disabled", app.button.state())
             self.assertNotIn("disabled", app.rtc_set_button.state())
             self.assertNotIn("disabled", app.rtc_read_button.state())
+            self.assertNotIn("disabled", app.servo_open_button.state())
+            self.assertNotIn("disabled", app.servo_close_button.state())
             app.toggle()
             self.assertEqual(app.commands.get_nowait(), ("led", True))
             self.assertIn("disabled", app.button.state())
@@ -148,6 +185,7 @@ class ProtocolTests(unittest.TestCase):
             app.process_events()
             self.assertIn("disabled", app.button.state())
             self.assertEqual(app.led_label.cget("text"), "LED: estado desconocido")
+            self.assertEqual(app.servo_label.cget("text"), "Ventana: posición desconocida")
         finally:
             app.destroy()
 
@@ -156,7 +194,17 @@ class ProtocolTests(unittest.TestCase):
             app = App()
         try:
             app.withdraw()
-            app.events.put(("connected", ("COM4", False, "RTC 2026-09-21 20:30:45")))
+            app.events.put(
+                (
+                    "connected",
+                    (
+                        "COM4",
+                        False,
+                        "RTC 2026-09-21 20:30:45",
+                        "SERVO CLOSED 5",
+                    ),
+                )
+            )
             app.process_events()
             app.read_rtc()
             self.assertEqual(app.commands.get_nowait(), ("rtc_get", None))
@@ -167,6 +215,37 @@ class ProtocolTests(unittest.TestCase):
             action, value = app.commands.get_nowait()
             self.assertEqual(action, "rtc_set")
             self.assertRegex(value, r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
+        finally:
+            app.destroy()
+
+    def test_gui_can_open_and_close_window(self):
+        with patch.object(ArduinoWorker, "start"):
+            app = App()
+        try:
+            app.withdraw()
+            app.events.put(
+                (
+                    "connected",
+                    (
+                        "COM4",
+                        False,
+                        "RTC 2026-09-21 20:30:45",
+                        "SERVO CLOSED 5",
+                    ),
+                )
+            )
+            app.process_events()
+            self.assertEqual(app.servo_label.cget("text"), "Ventana: CERRADA (5°)")
+            app.open_window()
+            self.assertEqual(app.commands.get_nowait(), ("servo", True))
+            app.events.put(("servo_done", True))
+            app.process_events()
+            self.assertEqual(app.servo_label.cget("text"), "Ventana: ABIERTA (89°)")
+            app.close_window()
+            self.assertEqual(app.commands.get_nowait(), ("servo", False))
+            app.events.put(("servo_done", False))
+            app.process_events()
+            self.assertEqual(app.servo_label.cget("text"), "Ventana: CERRADA (5°)")
         finally:
             app.destroy()
 
