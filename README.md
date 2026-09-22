@@ -42,11 +42,17 @@ El script utiliza `.tools/python/python.exe` si está disponible, o el comando
   puertos seriales que Windows expone, incluidos adaptadores USB de clones,
   priorizando el identificador USB de Arduino. No prueba dispositivos USB sin
   interfaz serial, como ratones o memorias.
+- Después de identificar y consultar correctamente la placa, guarda el puerto en
+  `variables.json`. En ejecuciones posteriores prueba primero ese puerto; si ya
+  no está disponible, continúa automáticamente con la búsqueda completa.
 - Cada candidato recibe `CASA_HELLO_V1`; solo acepta `CASA_UNO_LED_V1`.
   Esta identificación reconoce nuestro firmware, no certifica el modelo físico.
   El firmware debe estar cargado previamente.
 - El botón se habilita tras confirmar la conexión y el estado. Envía `LED 1`
   o `LED 0`; la etiqueta cambia cuando la placa confirma el comando.
+- El botón **Buscar Arduino de nuevo** permite cerrar la conexión actual y
+  reiniciar inmediatamente el recorrido de puertos. También adelanta el intento
+  si la aplicación estaba esperando el siguiente ciclo automático.
 - Consulta `STATUS` aproximadamente cada segundo para detectar desconexiones
   y cambios de estado. Estas consultas periódicas no saturan el log.
 - Registra puertos probados, esperas, comandos, respuestas, errores y resultados.

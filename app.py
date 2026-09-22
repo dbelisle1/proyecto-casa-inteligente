@@ -1,8 +1,10 @@
 """Interfaz Tkinter y comunicación serial con el firmware ControlLedUno."""
+import json
 import queue
 import threading
 import time
 from datetime import datetime
+from pathlib import Path
 import tkinter as tk
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
@@ -11,16 +13,48 @@ import serial
 from serial.tools import list_ports
 
 
+VARIABLES_FILE = Path(__file__).resolve().with_name("variables.json")
+
+
 class ArduinoWorker(threading.Thread):
     """Único propietario del puerto; nunca modifica widgets desde este hilo."""
 
-    def __init__(self, events, commands, stop):
+    def __init__(self, events, commands, stop, variables_path=VARIABLES_FILE, rescan=None):
         super().__init__(daemon=True)
         self.events, self.commands, self.stop = events, commands, stop
+        self.variables_path = Path(variables_path)
+        self.rescan = rescan or threading.Event()
         self.connection = None
+        self.remembered_port = self.load_remembered_port()
 
     def log(self, message):
         self.events.put(("log", message))
+
+    def load_remembered_port(self):
+        try:
+            variables = json.loads(self.variables_path.read_text(encoding="utf-8"))
+            port = variables.get("ultimo_puerto_arduino", "")
+            return port.strip() if isinstance(port, str) and port.strip() else None
+        except FileNotFoundError:
+            return None
+        except (OSError, json.JSONDecodeError, AttributeError) as error:
+            self.log(f"ERROR al leer {self.variables_path.name}: {error}. Se buscarán todos los puertos.")
+            return None
+
+    def remember_port(self, port):
+        temporary_path = self.variables_path.with_suffix(self.variables_path.suffix + ".tmp")
+        try:
+            contents = json.dumps({"ultimo_puerto_arduino": port}, ensure_ascii=False, indent=2) + "\n"
+            temporary_path.write_text(contents, encoding="utf-8")
+            temporary_path.replace(self.variables_path)
+            self.remembered_port = port
+            self.log(f"Puerto confirmado y guardado en {self.variables_path.name}: {port}")
+        except OSError as error:
+            self.log(f"ERROR al guardar el puerto en {self.variables_path.name}: {error}")
+            try:
+                temporary_path.unlink(missing_ok=True)
+            except OSError:
+                pass
 
     def exchange(self, command, accepted, verbose=True):
         if verbose:
@@ -49,11 +83,42 @@ class ArduinoWorker(threading.Thread):
             self.connection = None
         self.events.put(("disconnected", None))
 
+    def handle_rescan_request(self):
+        if not self.rescan.is_set():
+            return False
+        self.rescan.clear()
+        self.log("Búsqueda manual: reiniciando la conexión y el recorrido de puertos.")
+        self.disconnect()
+        return True
+
+    def wait_before_retry(self, seconds):
+        deadline = time.monotonic() + seconds
+        while not self.stop.is_set():
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return
+            if self.rescan.wait(min(0.1, remaining)):
+                self.rescan.clear()
+                self.log("Búsqueda manual: se adelantó el siguiente intento.")
+                return
+
     def discover(self):
-        ports = sorted(list_ports.comports(), key=lambda p: (p.vid != 0x2341, p.device))
+        remembered = (self.remembered_port or "").casefold()
+        ports = sorted(
+            list_ports.comports(),
+            key=lambda p: (
+                0 if p.device.casefold() == remembered else 1,
+                p.vid != 0x2341,
+                p.device.casefold(),
+            ),
+        )
         self.log(f"Búsqueda: {len(ports)} puerto(s) serial(es) disponibles.")
         if not ports:
             self.log("No hay puertos seriales. Compruebe cable USB de datos y controlador.")
+        elif remembered and any(port.device.casefold() == remembered for port in ports):
+            self.log(f"Se probará primero el puerto recordado: {self.remembered_port}")
+        elif remembered:
+            self.log(f"El puerto recordado {self.remembered_port} no está disponible; se hará una búsqueda completa.")
         for port in ports:
             if self.stop.is_set():
                 return False
@@ -67,6 +132,7 @@ class ArduinoWorker(threading.Thread):
                 self.exchange("CASA_HELLO_V1", {"CASA_UNO_LED_V1"})
                 state = self.exchange("STATUS", {"LED 0", "LED 1"})
                 self.log(f"Arduino identificado en {port.device}; estado inicial confirmado.")
+                self.remember_port(port.device)
                 self.events.put(("connected", (port.device, state == "LED 1")))
                 return True
             except (OSError, serial.SerialException) as error:
@@ -79,6 +145,7 @@ class ArduinoWorker(threading.Thread):
         try:
             while not self.stop.is_set():
                 try:
+                    self.handle_rescan_request()
                     if self.connection is None:
                         # Desechar acciones anteriores a una desconexión.
                         while True:
@@ -87,7 +154,7 @@ class ArduinoWorker(threading.Thread):
                             except queue.Empty:
                                 break
                         if not self.discover():
-                            self.stop.wait(5)
+                            self.wait_before_retry(5)
                             continue
                     try:
                         desired = self.commands.get(timeout=1)
@@ -116,6 +183,7 @@ class App(tk.Tk):
         self.minsize(580, 380)
         self.events, self.commands = queue.Queue(), queue.Queue()
         self.stop = threading.Event()
+        self.rescan = threading.Event()
         self.connected = False
         self.busy = False
         self.led_on = False
@@ -127,12 +195,16 @@ class App(tk.Tk):
         self.connection_label.pack(anchor="w", pady=(8, 16))
         self.led_label = ttk.Label(frame, text="LED: estado desconocido", font=("Segoe UI", 12))
         self.led_label.pack(anchor="w")
-        self.button = ttk.Button(frame, text="Esperando Arduino...", command=self.toggle, state="disabled")
-        self.button.pack(anchor="w", pady=12)
+        button_row = ttk.Frame(frame)
+        button_row.pack(anchor="w", pady=12)
+        self.button = ttk.Button(button_row, text="Esperando Arduino...", command=self.toggle, state="disabled")
+        self.button.pack(side="left")
+        self.search_button = ttk.Button(button_row, text="Buscar Arduino de nuevo", command=self.rediscover)
+        self.search_button.pack(side="left", padx=(8, 0))
         ttk.Label(frame, text="Registro de ejecución y errores").pack(anchor="w")
         self.log_box = ScrolledText(frame, height=14, state="disabled", wrap="word", font=("Consolas", 10))
         self.log_box.pack(fill="both", expand=True, pady=(6, 0))
-        self.worker = ArduinoWorker(self.events, self.commands, self.stop)
+        self.worker = ArduinoWorker(self.events, self.commands, self.stop, rescan=self.rescan)
         self.worker.start()
         self.protocol("WM_DELETE_WINDOW", self.close)
         self.after(100, self.process_events)
@@ -158,6 +230,15 @@ class App(tk.Tk):
             self.append_log("Paso 1: acción seleccionada; enviando al hilo de comunicación.")
             self.commands.put(not self.led_on)
             self.render()
+
+    def rediscover(self):
+        if self.closing:
+            return
+        self.connected, self.busy = False, False
+        self.connection_label.configure(text="Búsqueda manual solicitada...")
+        self.append_log("Acción: volver a buscar el Arduino en los puertos seriales.")
+        self.rescan.set()
+        self.render()
 
     def process_events(self):
         for _ in range(100):
@@ -185,6 +266,7 @@ class App(tk.Tk):
     def close(self):
         self.closing = True
         self.button.configure(state="disabled")
+        self.search_button.configure(state="disabled")
         self.stop.set()
         self.append_log("Cerrando comunicación serial...")
         self.wait_for_worker()

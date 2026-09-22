@@ -1,7 +1,10 @@
 """Pruebas de protocolo con puertos simulados; no sustituyen la prueba física."""
+import json
 import queue
 import threading
+import tempfile
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -34,7 +37,14 @@ class FakePort:
 
 class ProtocolTests(unittest.TestCase):
     def setUp(self):
-        self.worker = ArduinoWorker(queue.Queue(), queue.Queue(), threading.Event())
+        self.temporary_directory = tempfile.TemporaryDirectory()
+        self.variables_path = Path(self.temporary_directory.name) / "variables.json"
+        self.worker = ArduinoWorker(
+            queue.Queue(), queue.Queue(), threading.Event(), self.variables_path
+        )
+
+    def tearDown(self):
+        self.temporary_directory.cleanup()
 
     def test_occupied_port_is_skipped_and_next_is_identified(self):
         ports = [SimpleNamespace(device=p, vid=None, description="Test") for p in ["COM3", "COM4"]]
@@ -44,6 +54,22 @@ class ProtocolTests(unittest.TestCase):
         events = list(self.worker.events.queue)
         self.assertIn(("connected", ("COM4", False)), events)
         self.assertTrue(any("ocupado" in str(event) for event in events))
+        variables = json.loads(self.variables_path.read_text(encoding="utf-8"))
+        self.assertEqual(variables["ultimo_puerto_arduino"], "COM4")
+
+    def test_remembered_port_is_tried_first(self):
+        self.variables_path.write_text(
+            json.dumps({"ultimo_puerto_arduino": "COM4"}), encoding="utf-8"
+        )
+        worker = ArduinoWorker(
+            queue.Queue(), queue.Queue(), threading.Event(), self.variables_path
+        )
+        ports = [SimpleNamespace(device=p, vid=None, description="Test") for p in ["COM3", "COM4"]]
+        with patch("app.list_ports.comports", return_value=ports), patch(
+            "app.serial.Serial", return_value=FakePort()
+        ) as serial_constructor, patch.object(worker.stop, "wait", return_value=False):
+            self.assertTrue(worker.discover())
+        self.assertEqual(serial_constructor.call_args.args[0], "COM4")
 
     def test_led_commands_require_exact_confirmation(self):
         self.worker.connection = FakePort()
@@ -68,6 +94,14 @@ class ProtocolTests(unittest.TestCase):
         with patch("app.list_ports.comports", return_value=[]):
             self.assertFalse(self.worker.discover())
 
+    def test_manual_rescan_closes_current_connection(self):
+        port = FakePort()
+        self.worker.connection = port
+        self.worker.rescan.set()
+        self.assertTrue(self.worker.handle_rescan_request())
+        self.assertTrue(port.closed)
+        self.assertIsNone(self.worker.connection)
+
     def test_gui_only_enables_control_after_connection(self):
         with patch.object(ArduinoWorker, "start"):
             app = App()
@@ -88,6 +122,20 @@ class ProtocolTests(unittest.TestCase):
             app.process_events()
             self.assertIn("disabled", app.button.state())
             self.assertEqual(app.led_label.cget("text"), "LED: estado desconocido")
+        finally:
+            app.destroy()
+
+    def test_gui_can_request_a_new_search(self):
+        with patch.object(ArduinoWorker, "start"):
+            app = App()
+        try:
+            app.withdraw()
+            app.connected = True
+            app.rediscover()
+            self.assertTrue(app.rescan.is_set())
+            self.assertFalse(app.connected)
+            self.assertEqual(app.connection_label.cget("text"), "Búsqueda manual solicitada...")
+            self.assertIn("disabled", app.button.state())
         finally:
             app.destroy()
 
