@@ -1,0 +1,46 @@
+# Entornos y herramientas locales de Python
+.venv/
+venv/
+env/
+.tools/
+
+# Cache y archivos compilados de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Pruebas, cobertura y analizadores
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Empaquetado y compilacion
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Artefactos de compilacion de Arduino/C++
+*.elf
+*.eep
+*.hex
+*.map
+*.o
+*.d
+
+# Configuracion local de editores e IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# Archivos temporales y del sistema operativo
+*.log
+*.tmp
+*.bak
+*.swp
+Thumbs.db
+Desktop.ini
+.DS_Store

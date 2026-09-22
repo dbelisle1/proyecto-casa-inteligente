@@ -1,0 +1,56 @@
+COMANDOS PARA REINICIALIZAR Y ARRANCAR EL PROYECTO
+=================================================
+
+Ejecutar los comandos en PowerShell desde la carpeta raiz del proyecto.
+
+Reinicializacion completa de las dependencias
+---------------------------------------------
+
+1. Eliminar el entorno virtual anterior:
+
+Remove-Item -LiteralPath .\.venv -Recurse -Force -ErrorAction SilentlyContinue
+
+2. Crear un entorno virtual nuevo con Python:
+
+python -m venv .venv
+
+3. Actualizar pip dentro del entorno virtual:
+
+& .\.venv\Scripts\python.exe -m pip install --upgrade pip
+
+4. Instalar las dependencias del proyecto:
+
+& .\.venv\Scripts\python.exe -m pip install -r .\requirements.txt
+
+5. Arrancar la interfaz:
+
+& .\.venv\Scripts\python.exe .\app.py
+
+
+ARRANQUES POSTERIORES
+=====================
+
+Si el entorno .venv ya existe y funciona, arrancar directamente con:
+
+& .\.venv\Scripts\python.exe .\app.py
+
+Tambien se puede instalar/verificar dependencias y arrancar mediante el script:
+
+powershell -ExecutionPolicy Bypass -File .\iniciar.ps1
+
+
+PRUEBAS AUTOMATIZADAS
+=====================
+
+& .\.venv\Scripts\python.exe -m unittest -v
+
+
+NOTA SOBRE ARDUINO
+==================
+
+Antes de usar la interfaz, cargar en el Arduino UNO el sketch:
+
+.\arduino\ControlLedUno\ControlLedUno.ino
+
+Luego cerrar el Monitor Serial y el Serial Plotter de Arduino IDE para dejar
+libre el puerto USB.
