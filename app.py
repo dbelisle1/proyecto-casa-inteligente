@@ -14,6 +14,26 @@ from serial.tools import list_ports
 
 
 VARIABLES_FILE = Path(__file__).resolve().with_name("variables.json")
+REPORT_FILE = Path(__file__).resolve().with_name("reporte.txt")
+RTC_OFFLINE = "RTC OFFLINE"
+RTC_UNSET = "RTC SIN CONFIGURAR"
+
+
+def rtc_timestamp(answer):
+    """Convierte una respuesta del protocolo RTC en una marca para el reporte."""
+    if answer == "RTC OFFLINE":
+        return RTC_OFFLINE
+    if answer == "RTC UNSET":
+        return RTC_UNSET
+    if answer.startswith("RTC "):
+        return answer[4:]
+    return RTC_OFFLINE
+
+
+def append_report(path, timestamp, message):
+    """Agrega una línea al historial persistente de acciones y eventos."""
+    with Path(path).open("a", encoding="utf-8") as report:
+        report.write(f"[{timestamp}] {message}\n")
 
 
 class ArduinoWorker(threading.Thread):
@@ -56,7 +76,8 @@ class ArduinoWorker(threading.Thread):
             except OSError:
                 pass
 
-    def exchange(self, command, accepted, verbose=True):
+    def exchange(self, command, accepted=None, accepted_prefixes=(), verbose=True):
+        accepted = accepted or set()
         if verbose:
             self.log(f"TX → {command}")
         self.connection.reset_input_buffer()
@@ -68,11 +89,27 @@ class ArduinoWorker(threading.Thread):
                 continue
             if verbose:
                 self.log(f"RX ← {answer}")
-            if answer in accepted:
+            if answer in accepted or any(answer.startswith(prefix) for prefix in accepted_prefixes):
                 return answer
             if answer.startswith("ERR"):
                 raise serial.SerialException(f"Arduino respondió: {answer}")
         raise serial.SerialException(f"Sin confirmación válida para {command!r} (2 s).")
+
+    def query_rtc(self, verbose=True):
+        return self.exchange("RTC GET", accepted_prefixes=("RTC ",), verbose=verbose)
+
+    def rtc_for_report(self):
+        if self.connection is None:
+            return "RTC OFFLINE"
+        try:
+            return self.query_rtc(verbose=False)
+        except (OSError, serial.SerialException) as error:
+            self.log(f"No se pudo obtener la hora para el reporte: {error}")
+            return "RTC OFFLINE"
+
+    def report(self, message, rtc_answer=None):
+        answer = rtc_answer if rtc_answer is not None else self.rtc_for_report()
+        self.events.put(("report", (rtc_timestamp(answer), message)))
 
     def disconnect(self):
         if self.connection is not None:
@@ -87,6 +124,7 @@ class ArduinoWorker(threading.Thread):
         if not self.rescan.is_set():
             return False
         self.rescan.clear()
+        self.report("CONTROL MANUAL | Nueva búsqueda del Arduino solicitada")
         self.log("Búsqueda manual: reiniciando la conexión y el recorrido de puertos.")
         self.disconnect()
         return True
@@ -98,7 +136,6 @@ class ArduinoWorker(threading.Thread):
             if remaining <= 0:
                 return
             if self.rescan.wait(min(0.1, remaining)):
-                self.rescan.clear()
                 self.log("Búsqueda manual: se adelantó el siguiente intento.")
                 return
 
@@ -131,9 +168,10 @@ class ArduinoWorker(threading.Thread):
                     return False
                 self.exchange("CASA_HELLO_V1", {"CASA_UNO_LED_V1"})
                 state = self.exchange("STATUS", {"LED 0", "LED 1"})
+                rtc_state = self.rtc_for_report()
                 self.log(f"Arduino identificado en {port.device}; estado inicial confirmado.")
                 self.remember_port(port.device)
-                self.events.put(("connected", (port.device, state == "LED 1")))
+                self.events.put(("connected", (port.device, state == "LED 1", rtc_state)))
                 return True
             except (OSError, serial.SerialException) as error:
                 self.log(f"ERROR en {port.device}: {error}")
@@ -157,18 +195,54 @@ class ArduinoWorker(threading.Thread):
                             self.wait_before_retry(5)
                             continue
                     try:
-                        desired = self.commands.get(timeout=1)
+                        action, value = self.commands.get(timeout=1)
                     except queue.Empty:
                         state = self.exchange("STATUS", {"LED 0", "LED 1"}, verbose=False)
                         self.events.put(("state", state == "LED 1"))
                         continue
-                    self.log(f"Acción: {'encender' if desired else 'apagar'} el LED integrado.")
-                    expected = f"LED {int(desired)}"
-                    self.exchange(expected, {expected})
-                    self.log("Acción completada: el Arduino confirmó el estado solicitado.")
-                    self.events.put(("done", desired))
+                    rtc_answer = None
+                    report_message = None
+                    try:
+                        if action == "led":
+                            desired = bool(value)
+                            report_message = (
+                                "CONTROL MANUAL | Botón Encender LED presionado"
+                                if desired
+                                else "CONTROL MANUAL | Botón Apagar LED presionado"
+                            )
+                            rtc_answer = self.rtc_for_report()
+                            self.log(f"Acción: {'encender' if desired else 'apagar'} el LED integrado.")
+                            expected = f"LED {int(desired)}"
+                            self.exchange(expected, {expected})
+                            self.log("Acción completada: el Arduino confirmó el estado solicitado.")
+                            self.events.put(("done", desired))
+                        elif action == "rtc_get":
+                            report_message = "CONTROL MANUAL | Consulta de fecha y hora del RTC"
+                            rtc_answer = self.query_rtc()
+                            value_for_console = rtc_timestamp(rtc_answer)
+                            self.log(f"Datos actuales del módulo: {value_for_console}")
+                            print(f"RTC: {value_for_console}", flush=True)
+                            self.events.put(("rtc_done", rtc_answer))
+                        elif action == "rtc_set":
+                            report_message = f"CONTROL MANUAL | Asignación de hora al RTC: {value}"
+                            rtc_answer = self.exchange(
+                                f"RTC SET {value}", accepted_prefixes=("RTC ",)
+                            )
+                            if rtc_answer == "RTC OFFLINE":
+                                self.log("No se pudo asignar la hora: RTC OFFLINE")
+                            elif rtc_answer == "RTC UNSET":
+                                self.log("El RTC respondió, pero la hora continúa sin configurar.")
+                            else:
+                                self.log(f"Hora del RTC asignada correctamente: {rtc_timestamp(rtc_answer)}")
+                            self.events.put(("rtc_done", rtc_answer))
+                        else:
+                            self.log(f"ERROR: acción interna desconocida: {action}")
+                    finally:
+                        if report_message is not None:
+                            self.report(report_message, rtc_answer or "RTC OFFLINE")
                 except (OSError, serial.SerialException) as error:
                     self.log(f"ERROR de comunicación: {error}. Estado del LED desconocido.")
+                    self.report(f"SISTEMA | Error de comunicación: {error}", "RTC OFFLINE")
                     self.disconnect()
                     self.stop.wait(1)
         finally:
@@ -176,16 +250,18 @@ class ArduinoWorker(threading.Thread):
 
 
 class App(tk.Tk):
-    def __init__(self):
+    def __init__(self, report_path=REPORT_FILE):
         super().__init__()
         self.title("Casa inteligente · Arduino UNO")
-        self.geometry("760x510")
-        self.minsize(580, 380)
+        self.geometry("780x610")
+        self.minsize(640, 480)
+        self.report_path = Path(report_path)
         self.events, self.commands = queue.Queue(), queue.Queue()
         self.stop = threading.Event()
         self.rescan = threading.Event()
         self.connected = False
         self.busy = False
+        self.busy_action = None
         self.led_on = False
         self.closing = False
         frame = ttk.Frame(self, padding=20)
@@ -201,17 +277,32 @@ class App(tk.Tk):
         self.button.pack(side="left")
         self.search_button = ttk.Button(button_row, text="Buscar Arduino de nuevo", command=self.rediscover)
         self.search_button.pack(side="left", padx=(8, 0))
+        ttk.Separator(frame).pack(fill="x", pady=(4, 12))
+        ttk.Label(frame, text="Reloj RTC DS3231", font=("Segoe UI", 12, "bold")).pack(anchor="w")
+        self.rtc_label = ttk.Label(frame, text="RTC: estado desconocido")
+        self.rtc_label.pack(anchor="w", pady=(4, 0))
+        rtc_button_row = ttk.Frame(frame)
+        rtc_button_row.pack(anchor="w", pady=10)
+        self.rtc_set_button = ttk.Button(
+            rtc_button_row, text="Asignar hora al RTC", command=self.set_rtc_time, state="disabled"
+        )
+        self.rtc_set_button.pack(side="left")
+        self.rtc_read_button = ttk.Button(
+            rtc_button_row, text="Mostrar datos del RTC", command=self.read_rtc, state="disabled"
+        )
+        self.rtc_read_button.pack(side="left", padx=(8, 0))
         ttk.Label(frame, text="Registro de ejecución y errores").pack(anchor="w")
-        self.log_box = ScrolledText(frame, height=14, state="disabled", wrap="word", font=("Consolas", 10))
+        self.log_box = ScrolledText(frame, height=12, state="disabled", wrap="word", font=("Consolas", 10))
         self.log_box.pack(fill="both", expand=True, pady=(6, 0))
         self.worker = ArduinoWorker(self.events, self.commands, self.stop, rescan=self.rescan)
         self.worker.start()
         self.protocol("WM_DELETE_WINDOW", self.close)
         self.after(100, self.process_events)
 
-    def append_log(self, text):
+    def append_log(self, text, timestamp=None):
         self.log_box.configure(state="normal")
-        self.log_box.insert("end", f"[{datetime.now():%H:%M:%S}] {text}\n")
+        visible_timestamp = timestamp or f"{datetime.now():%H:%M:%S}"
+        self.log_box.insert("end", f"[{visible_timestamp}] {text}\n")
         if int(self.log_box.index("end-1c").split(".")[0]) > 1500:
             self.log_box.delete("1.0", "101.0")
         self.log_box.see("end")
@@ -221,20 +312,38 @@ class App(tk.Tk):
         self.led_label.configure(text="LED: " + (("ENCENDIDO" if self.led_on else "APAGADO") if self.connected else "estado desconocido"))
         self.button.configure(
             state="normal" if self.connected and not self.busy else "disabled",
-            text=("Ejecutando..." if self.busy else ("Apagar LED" if self.led_on else "Encender LED")) if self.connected else "Esperando Arduino...",
+            text=("Ejecutando..." if self.busy_action == "led" else ("Apagar LED" if self.led_on else "Encender LED")) if self.connected else "Esperando Arduino...",
         )
+        rtc_button_state = "normal" if self.connected and not self.busy else "disabled"
+        self.rtc_set_button.configure(state=rtc_button_state)
+        self.rtc_read_button.configure(state=rtc_button_state)
 
     def toggle(self):
         if self.connected and not self.busy:
-            self.busy = True
+            self.busy, self.busy_action = True, "led"
             self.append_log("Paso 1: acción seleccionada; enviando al hilo de comunicación.")
-            self.commands.put(not self.led_on)
+            self.commands.put(("led", not self.led_on))
+            self.render()
+
+    def set_rtc_time(self):
+        if self.connected and not self.busy:
+            value = datetime.now().replace(microsecond=0).strftime("%Y-%m-%d %H:%M:%S")
+            self.busy, self.busy_action = True, "rtc_set"
+            self.append_log(f"Acción: asignar al RTC la hora de esta computadora ({value}).")
+            self.commands.put(("rtc_set", value))
+            self.render()
+
+    def read_rtc(self):
+        if self.connected and not self.busy:
+            self.busy, self.busy_action = True, "rtc_get"
+            self.append_log("Acción: solicitar los datos actuales del módulo RTC.")
+            self.commands.put(("rtc_get", None))
             self.render()
 
     def rediscover(self):
         if self.closing:
             return
-        self.connected, self.busy = False, False
+        self.connected, self.busy, self.busy_action = False, False, None
         self.connection_label.configure(text="Búsqueda manual solicitada...")
         self.append_log("Acción: volver a buscar el Arduino en los puertos seriales.")
         self.rescan.set()
@@ -248,17 +357,29 @@ class App(tk.Tk):
                 break
             if kind == "log":
                 self.append_log(value)
+            elif kind == "report":
+                timestamp, message = value
+                try:
+                    append_report(self.report_path, timestamp, message)
+                    self.append_log(f"REPORTE | {message}", timestamp)
+                except OSError as error:
+                    self.append_log(f"ERROR al escribir {self.report_path.name}: {error}")
             elif kind == "connected":
-                port, self.led_on = value
-                self.connected, self.busy = True, False
+                port, self.led_on, rtc_answer = value
+                self.connected, self.busy, self.busy_action = True, False, None
                 self.connection_label.configure(text=f"Conectado: Arduino UNO · {port} · 9600 baudios")
+                self.rtc_label.configure(text=f"RTC: {rtc_timestamp(rtc_answer)}")
             elif kind == "disconnected":
-                self.connected, self.busy = False, False
+                self.connected, self.busy, self.busy_action = False, False, None
                 self.connection_label.configure(text="Sin conexión · búsqueda automática activa")
+                self.rtc_label.configure(text="RTC: estado desconocido")
             elif kind in ("done", "state"):
                 self.led_on = value
                 if kind == "done":
-                    self.busy = False
+                    self.busy, self.busy_action = False, None
+            elif kind == "rtc_done":
+                self.busy, self.busy_action = False, None
+                self.rtc_label.configure(text=f"RTC: {rtc_timestamp(value)}")
             self.render()
         if not self.closing:
             self.after(100, self.process_events)
@@ -267,6 +388,8 @@ class App(tk.Tk):
         self.closing = True
         self.button.configure(state="disabled")
         self.search_button.configure(state="disabled")
+        self.rtc_set_button.configure(state="disabled")
+        self.rtc_read_button.configure(state="disabled")
         self.stop.set()
         self.append_log("Cerrando comunicación serial...")
         self.wait_for_worker()

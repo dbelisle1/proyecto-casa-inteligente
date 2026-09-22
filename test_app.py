@@ -9,7 +9,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import serial
-from app import ArduinoWorker, App
+from app import ArduinoWorker, App, RTC_OFFLINE, RTC_UNSET, rtc_timestamp
 
 
 class FakePort:
@@ -17,6 +17,8 @@ class FakePort:
         self.answer = b""
         self.closed = False
         self.led = False
+        self.rtc_online = True
+        self.rtc_value = "2026-09-21 20:30:45"
 
     def reset_input_buffer(self):
         self.answer = b""
@@ -25,7 +27,16 @@ class FakePort:
         replies = {b"CASA_HELLO_V1\n": b"CASA_UNO_LED_V1\n"}
         if command in (b"LED 1\n", b"LED 0\n"):
             self.led = command == b"LED 1\n"
-        self.answer = replies.get(command, b"LED 1\n" if self.led else b"LED 0\n")
+        if command == b"RTC GET\n":
+            self.answer = f"RTC {self.rtc_value}\n".encode() if self.rtc_online else b"RTC OFFLINE\n"
+        elif command.startswith(b"RTC SET "):
+            if self.rtc_online:
+                self.rtc_value = command.decode("ascii").removeprefix("RTC SET ").strip()
+                self.answer = f"RTC {self.rtc_value}\n".encode()
+            else:
+                self.answer = b"RTC OFFLINE\n"
+        else:
+            self.answer = replies.get(command, b"LED 1\n" if self.led else b"LED 0\n")
 
     def read_until(self, *args):
         answer, self.answer = self.answer, b""
@@ -52,7 +63,7 @@ class ProtocolTests(unittest.TestCase):
         with patch("app.list_ports.comports", return_value=ports), patch("app.serial.Serial", side_effect=[serial.SerialException("ocupado"), good]), patch.object(self.worker.stop, "wait", return_value=False):
             self.assertTrue(self.worker.discover())
         events = list(self.worker.events.queue)
-        self.assertIn(("connected", ("COM4", False)), events)
+        self.assertIn(("connected", ("COM4", False, "RTC 2026-09-21 20:30:45")), events)
         self.assertTrue(any("ocupado" in str(event) for event in events))
         variables = json.loads(self.variables_path.read_text(encoding="utf-8"))
         self.assertEqual(variables["ultimo_puerto_arduino"], "COM4")
@@ -75,6 +86,19 @@ class ProtocolTests(unittest.TestCase):
         self.worker.connection = FakePort()
         self.assertEqual(self.worker.exchange("LED 1", {"LED 1"}), "LED 1")
         self.assertEqual(self.worker.exchange("LED 0", {"LED 0"}), "LED 0")
+
+    def test_rtc_can_be_read_set_and_reported_offline(self):
+        port = FakePort()
+        self.worker.connection = port
+        self.assertEqual(self.worker.query_rtc(), "RTC 2026-09-21 20:30:45")
+        answer = self.worker.exchange(
+            "RTC SET 2026-10-01 08:09:10", accepted_prefixes=("RTC ",)
+        )
+        self.assertEqual(answer, "RTC 2026-10-01 08:09:10")
+        port.rtc_online = False
+        self.assertEqual(self.worker.query_rtc(), "RTC OFFLINE")
+        self.assertEqual(rtc_timestamp("RTC OFFLINE"), RTC_OFFLINE)
+        self.assertEqual(rtc_timestamp("RTC UNSET"), RTC_UNSET)
 
     def test_wrong_firmware_rejected_and_port_closed(self):
         port = FakePort()
@@ -108,11 +132,13 @@ class ProtocolTests(unittest.TestCase):
         try:
             app.withdraw()
             self.assertIn("disabled", app.button.state())
-            app.events.put(("connected", ("COM4", False)))
+            app.events.put(("connected", ("COM4", False, "RTC OFFLINE")))
             app.process_events()
             self.assertNotIn("disabled", app.button.state())
+            self.assertNotIn("disabled", app.rtc_set_button.state())
+            self.assertNotIn("disabled", app.rtc_read_button.state())
             app.toggle()
-            self.assertTrue(app.commands.get_nowait())
+            self.assertEqual(app.commands.get_nowait(), ("led", True))
             self.assertIn("disabled", app.button.state())
             self.assertEqual(app.led_label.cget("text"), "LED: APAGADO")
             app.events.put(("done", True))
@@ -122,6 +148,40 @@ class ProtocolTests(unittest.TestCase):
             app.process_events()
             self.assertIn("disabled", app.button.state())
             self.assertEqual(app.led_label.cget("text"), "LED: estado desconocido")
+        finally:
+            app.destroy()
+
+    def test_gui_can_request_rtc_actions(self):
+        with patch.object(ArduinoWorker, "start"):
+            app = App()
+        try:
+            app.withdraw()
+            app.events.put(("connected", ("COM4", False, "RTC 2026-09-21 20:30:45")))
+            app.process_events()
+            app.read_rtc()
+            self.assertEqual(app.commands.get_nowait(), ("rtc_get", None))
+            app.events.put(("rtc_done", "RTC 2026-09-21 20:31:00"))
+            app.process_events()
+            self.assertEqual(app.rtc_label.cget("text"), "RTC: 2026-09-21 20:31:00")
+            app.set_rtc_time()
+            action, value = app.commands.get_nowait()
+            self.assertEqual(action, "rtc_set")
+            self.assertRegex(value, r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
+        finally:
+            app.destroy()
+
+    def test_report_event_is_written_with_rtc_timestamp(self):
+        report_path = Path(self.temporary_directory.name) / "reporte.txt"
+        with patch.object(ArduinoWorker, "start"):
+            app = App(report_path=report_path)
+        try:
+            app.withdraw()
+            app.events.put(("report", ("RTC OFFLINE", "CONTROL MANUAL | Prueba")))
+            app.process_events()
+            self.assertEqual(
+                report_path.read_text(encoding="utf-8"),
+                "[RTC OFFLINE] CONTROL MANUAL | Prueba\n",
+            )
         finally:
             app.destroy()
 

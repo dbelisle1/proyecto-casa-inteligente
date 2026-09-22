@@ -52,5 +52,13 @@ Antes de usar la interfaz, cargar en el Arduino UNO el sketch:
 
 .\arduino\ControlLedUno\ControlLedUno.ino
 
+El sketch requiere instalar "RTClib by Adafruit" desde el gestor de
+bibliotecas de Arduino IDE. Conectar el DS3231 de esta forma:
+
+SDA -> A4
+SCL -> A5
+VCC -> 5V
+GND -> GND
+
 Luego cerrar el Monitor Serial y el Serial Plotter de Arduino IDE para dejar
 libre el puerto USB.
