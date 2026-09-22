@@ -126,3 +126,128 @@ Formato: [fecha y hora del RTC] TIPO | descripcion
 [2026-09-21 22:27:43] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
 [2026-09-21 22:27:45] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
 [RTC OFFLINE] SISTEMA | Error de comunicación: WriteFile failed (PermissionError(13, 'Access is denied.', None, 5))
+[2026-09-21 22:48:57] CONTROL MANUAL | Botón Encender LED presionado
+[2026-09-21 22:48:58] CONTROL MANUAL | Botón Apagar LED presionado
+[2026-09-21 22:49:00] CONTROL MANUAL | Consulta de fecha y hora del RTC
+[2026-09-21 22:49:02] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 22:49:04] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 22:49:08] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 22:49:09] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 22:49:11] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 22:49:12] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 22:49:14] CONTROL MANUAL | Botón Abrir puerta presionado
+[RTC OFFLINE] SISTEMA | Error de comunicación: Estado inesperado de la puerta: DOOR CLOSED
+[2026-09-21 22:49:18] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 22:49:20] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 22:49:23] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 22:49:25] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 22:49:29] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 22:49:31] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 22:49:32] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 22:49:35] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 22:49:35] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 22:49:36] CONTROL MANUAL | Botón Cerrar puerta presionado
+[RTC OFFLINE] SISTEMA | Error de comunicación: Estado inesperado de la puerta: DOOR MOVING OPEN
+[2026-09-21 22:49:44] CONTROL MANUAL | Botón Abrir puerta presionado
+[RTC OFFLINE] SISTEMA | Error de comunicación: Estado inesperado de la puerta: DOOR CLOSED
+[2026-09-21 22:49:50] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 22:49:52] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 22:49:54] CONTROL MANUAL | Botón Cerrar puerta presionado
+[RTC OFFLINE] SISTEMA | Error de comunicación: Estado inesperado de la puerta: DOOR MOVING OPEN
+[2026-09-21 22:50:02] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 22:50:05] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 22:50:07] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 22:50:19] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 22:50:22] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 22:50:24] CONTROL MANUAL | Botón Abrir puerta presionado
+[RTC OFFLINE] SISTEMA | Error de comunicación: Estado inesperado de la puerta: DOOR CLOSED
+[2026-09-21 22:50:31] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 22:50:33] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 22:50:35] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 22:50:48] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 22:50:51] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 22:50:51] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 22:50:55] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 22:50:57] CONTROL MANUAL | Botón Abrir puerta presionado
+[RTC OFFLINE] SISTEMA | Error de comunicación: WriteFile failed (PermissionError(13, 'Access is denied.', None, 5))
+[2026-09-21 22:51:47] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 22:51:52] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 22:51:55] CONTROL MANUAL | Botón Abrir puerta presionado
+[RTC OFFLINE] SISTEMA | Error de comunicación: Sin confirmación válida para 'DOOR STATUS' (2 s).
+[2026-09-21 22:52:03] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 22:52:07] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 22:52:09] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 22:52:11] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 22:52:17] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 22:52:18] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 22:52:21] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 22:52:23] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 22:52:24] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 22:52:26] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 22:52:28] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 22:52:30] CONTROL MANUAL | Botón Abrir puerta presionado
+[RTC OFFLINE] SISTEMA | Error de comunicación: WriteFile failed (PermissionError(13, 'Access is denied.', None, 5))
+[2026-09-21 23:02:43] CONTROL MANUAL | Botón Abrir puerta presionado
+[RTC OFFLINE] SISTEMA | Error de comunicación: Sin confirmación válida para 'DOOR OPEN' (2 s).
+[2026-09-21 23:02:51] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 23:02:54] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 23:03:00] CONTROL MANUAL | Botón Cerrar puerta presionado
+[RTC OFFLINE] SISTEMA | Error de comunicación: Sin confirmación válida para 'DOOR STATUS' (2 s).
+[2026-09-21 23:03:08] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 23:03:11] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 23:03:14] CONTROL MANUAL | Consulta de fecha y hora del RTC
+[2026-09-21 23:03:16] CONTROL MANUAL | Botón Encender LED presionado
+[2026-09-21 23:03:16] CONTROL MANUAL | Botón Apagar LED presionado
+[2026-09-21 23:03:19] CONTROL MANUAL | Botón Abrir puerta presionado
+[RTC OFFLINE] SISTEMA | Error de comunicación: Estado inesperado de la puerta: DOOR CLOSED
+[2026-09-21 23:03:24] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 23:03:27] CONTROL MANUAL | Botón Abrir puerta presionado
+[RTC OFFLINE] SISTEMA | Error de comunicación: Sin confirmación válida para 'DOOR STATUS' (2 s).
+[RTC OFFLINE] SISTEMA | Error de comunicación: WriteFile failed (PermissionError(13, 'Access is denied.', None, 5))
+[2026-09-21 23:04:17] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 23:04:20] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 23:04:22] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 23:04:25] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 23:04:30] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 23:04:32] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 23:04:33] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 23:04:34] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 23:04:39] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 23:04:41] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 23:04:42] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 23:04:42] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 23:04:43] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 23:04:46] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 23:04:48] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 23:04:50] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 23:04:52] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 23:04:54] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 23:04:55] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 23:04:57] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 23:05:07] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 23:05:13] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 23:05:20] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 23:05:23] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 23:05:26] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 23:05:30] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 23:05:32] CONTROL MANUAL | Botón Abrir puerta presionado
+[RTC OFFLINE] SISTEMA | Error de comunicación: WriteFile failed (PermissionError(13, 'Access is denied.', None, 5))
+[2026-09-21 23:06:33] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 23:06:34] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 23:06:38] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 23:06:42] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 23:06:44] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 23:06:48] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 23:06:50] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 23:06:52] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 23:06:54] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 23:06:59] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 23:07:05] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 23:07:10] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 23:07:15] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 23:07:19] CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)
+[2026-09-21 23:07:21] CONTROL MANUAL | Botón Abrir puerta presionado
+[2026-09-21 23:07:24] CONTROL MANUAL | Botón Cerrar ventana presionado (5 grados)
+[2026-09-21 23:07:26] CONTROL MANUAL | Botón Cerrar puerta presionado
+[2026-09-21 23:07:30] CONTROL MANUAL | Botón Abrir puerta presionado
+[RTC OFFLINE] SISTEMA | Error de comunicación: WriteFile failed (PermissionError(13, 'Access is denied.', None, 5))
