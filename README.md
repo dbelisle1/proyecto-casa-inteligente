@@ -6,12 +6,11 @@ puerta con motor DC mediante L298N. También administra la conexión USB serial 
 permite consultar o ajustar un reloj RTC DS3231 y registra las mediciones de un
 sensor DHT11. También incorpora una alarma con sensor PIR y buzzer. La
 alarma habilita además iluminación automática mediante una fotoresistencia y
-un LED exterior. La comunicación utiliza pySerial a 9600 baudios; las acciones
-manuales y las mediciones o detecciones automáticas se conservan en
+un LED exterior. Un sensor digital de depósito lleno/vacío controla una bomba
+de agua mediante un relé cuando la alarma está activa. La comunicación utiliza
+pySerial a 9600 baudios; las
+acciones manuales y las mediciones o detecciones automáticas se conservan en
 `reporte.txt`.
-
-El PDF `proyecto2.pdf` también describe como etapa posterior la bomba de agua.
-El registro ya está preparado para incorporar sus eventos automáticos.
 
 ## Preparar la placa
 
@@ -29,13 +28,15 @@ El registro ya está preparado para incorporar sus eventos automáticos.
 |---|---|---|---|
 | Comunicación con la computadora | USB | Conector USB (`D0/RX` y `D1/TX` quedan reservados internamente) | Protocolo serial a 9600 baudios |
 | LED integrado | LED `L` de la placa | `D13` / `LED_BUILTIN` | Encendido y apagado manual |
-| Servomotor de la ventana | Señal | `D2` | Posiciones cerrada de 0° y abierta de 89° |
+| Servomotor de la ventana | Señal | `D2` | Posiciones cerrada de 0° y abierta de 90° |
 | Puente H L298N | `IN1` | `D3` | Giro del motor de la puerta en un sentido |
 | Puente H L298N | `IN2` | `D4` | Giro del motor de la puerta en sentido inverso |
 | Sensor DHT11 | `DATA` | `D5` | Lectura de temperatura y humedad |
 | Buzzer pasivo o módulo buzzer | Señal / `SIG` | `D6` | Alarma sonora de 440/523 Hz |
 | Sensor PIR | Salida / `OUT` | `D7` | Detección de movimiento o intrusos |
 | LED exterior | Ánodo mediante resistencia | `D9` | Iluminación automática cuando la alarma está activa |
+| Módulo relé de la bomba | Entrada / `IN` | `D11` | Encendido automático de la bomba |
+| Sensor de depósito lleno/vacío | Salida / `OUT` | `D12` | Indica si el depósito está lleno o vacío |
 | Fotoresistencia LDR | Punto medio del divisor | `A0` | Medición del nivel de luz |
 | Reloj DS3231 | `SDA` | `A4` / `SDA` | Datos del bus I2C |
 | Reloj DS3231 | `SCL` | `A5` / `SCL` | Reloj del bus I2C |
@@ -60,7 +61,7 @@ gestor de bibliotecas de Arduino IDE antes de compilar el sketch. La ausencia
 del RTC no detiene el firmware: las funciones restantes continúan operativas.
 
 Para el servomotor conecte la señal al pin digital `D2`. Al arrancar se ordena
-la posición cerrada de 0°; la posición abierta es 89°. Se recomienda alimentar
+la posición cerrada de 0°; la posición abierta es 90°. Se recomienda alimentar
 el servo con una fuente regulada de 5 V adecuada para su consumo y unir el GND
 de esa fuente con el GND del Arduino. Evite alimentar servos de alto consumo
 directamente desde el pin de 5 V del UNO.
@@ -96,6 +97,20 @@ LDR entre `5V` y `A0`, y una resistencia fija de aproximadamente 10 kΩ entre
 como espera el firmware. El umbral de oscuridad es 500 y puede calibrarse modificando
 `kDarkThreshold`. La automatización queda deshabilitada y el LED permanece
 apagado mientras la alarma esté desactivada.
+
+Para el depósito conecte `OUT` del sensor de lleno/vacío a `D12` y `IN` del
+módulo relé a `D11`, además de las alimentaciones y tierras indicadas por cada
+módulo. La bomba debe usar una fuente apropiada y su circuito de potencia debe
+pasar por los contactos `COM` y `NO` del relé; nunca alimente la bomba desde un
+pin del Arduino. El firmware está configurado para un módulo relé **trigger
+HIGH**, activo en nivel alto (`kRelayActiveLow = false`). El sensor está
+configurado como activo en nivel bajo (`kFullSensorActiveLow = true`): una
+entrada `LOW` en `D12` significa **depósito lleno** y siempre apaga el relé; una
+entrada `HIGH` significa **depósito vacío** y permite encenderlo únicamente si la
+alarma está activa. Por ello, desactivar la alarma apaga la bomba y volver a
+activarla no puede encenderla si el depósito sigue lleno. No deje `D12`
+flotante: si el sensor no entrega siempre un nivel lógico definido, añada una
+resistencia pull-up o pull-down apropiada.
 
 ## Ejecutar
 
@@ -136,10 +151,10 @@ El script utiliza `.tools/python/python.exe` si está disponible, o el comando
   El mismo evento `report` queda disponible para los eventos automáticos que se
   incorporen en las siguientes etapas.
 - La sección **Ventana · Servomotor** ofrece controles independientes para abrir
-  a 89° y cerrar a 0°. El Arduino responde con la posición ordenada y la acción
-  queda registrada con la hora del RTC. El movimiento se realiza gradualmente,
-  un grado cada 20 ms (aproximadamente 1.7 s entre ambos extremos), sin bloquear
-  la comunicación serial.
+  a 90° y cerrar a 0°. El Arduino envía directamente la posición final, sin un
+  limitador de velocidad por software; el tiempo físico del recorrido depende
+  de la velocidad propia del servomotor. La acción queda registrada con la hora
+  del RTC.
 - La sección **Puerta · Motor DC L298N** controla apertura y cierre invirtiendo
   `IN1/IN2`. Un PWM por software de 500 Hz limita la potencia al 15% y evita el
   arranque como una ráfaga continua a máxima velocidad. El motor se detiene
@@ -162,6 +177,12 @@ El script utiliza `.tools/python/python.exe` si está disponible, o el comando
   `A0` y el estado del LED exterior. Con la alarma activa, una lectura inferior
   a 500 enciende `D9`; una lectura de 500 o más lo apaga. Cada cambio se registra con
   la hora del RTC. Desactivar la alarma fuerza inmediatamente el LED a apagado.
+- La sección **Depósito · Bomba** muestra `LLENO` o `VACÍO` y el estado del
+  relé. La bomba solo se enciende cuando la alarma está activa y el depósito
+  está vacío. El estado lleno tiene prioridad: mantiene la bomba apagada incluso
+  si se desactiva y vuelve a activar la alarma. Python consulta el estado dos
+  veces por segundo y registra cada cambio automático en `reporte.txt` con la
+  hora del RTC.
 - Consulta `STATUS` aproximadamente cada segundo para detectar desconexiones
   y cambios de estado. Estas consultas periódicas no saturan el log.
 - Registra puertos probados, esperas, comandos, respuestas, errores y resultados.
@@ -188,7 +209,7 @@ conectadas; desconecte equipos seriales ajenos durante las pruebas.
 6. Pulse **Asignar hora al RTC** y vuelva a consultar: la hora debe coincidir
    aproximadamente con la computadora y la acción debe aparecer en `reporte.txt`.
 7. Pulse **Abrir ventana** y **Cerrar ventana**, comprobando las posiciones de
-   89° y 0° y sus entradas correspondientes en `reporte.txt`.
+   90° y 0° y sus entradas correspondientes en `reporte.txt`.
 8. Con la puerta inicialmente cerrada, pulse **Abrir puerta** y compruebe que el
    motor gira a velocidad reducida durante aproximadamente 50 ms y se detiene.
    Pulse **Cerrar puerta** y confirme el giro inverso con la misma velocidad y
@@ -205,9 +226,14 @@ conectadas; desconecte equipos seriales ajenos durante las pruebas.
     apagado. Active la alarma, vuelva a cubrirla y compruebe que `D9` se encienda
     al bajar del umbral. Ilumine la LDR para apagarlo y revise ambos eventos en
     `reporte.txt`.
-12. Desconecte USB: debe mostrar error y estado desconocido. Reconecte y espere
+12. Con el depósito vacío y la alarma desactivada, compruebe que el relé esté
+    apagado. Active la alarma y confirme que el relé se encienda. Simule el
+    depósito lleno: debe apagarse. Desactive y vuelva a activar la alarma; el
+    relé debe permanecer apagado hasta que el sensor indique `VACÍO`. Revise los
+    cambios en `reporte.txt` y realice primero esta prueba sin conectar la bomba.
+13. Desconecte USB: debe mostrar error y estado desconocido. Reconecte y espere
    la detección automática (cada candidato puede requerir unos cuatro segundos).
-13. Cierre y reabra: el puerto debe quedar disponible.
+14. Cierre y reabra: el puerto debe quedar disponible.
 
 Referencias: [UNO Rev3](https://store.arduino.cc/products/arduino-uno-rev3),
 [enumeración de puertos](https://pyserial.readthedocs.io/en/stable/tools.html),
@@ -217,14 +243,15 @@ Referencias: [UNO Rev3](https://store.arduino.cc/products/arduino-uno-rev3),
 
 - Firmware compilado para `arduino:avr:uno` con RTClib 2.1.4, Adafruit BusIO
   1.17.4, Servo 1.3.0, DHT sensor library 1.4.7 y Adafruit Unified Sensor
-  1.1.15: 14330 bytes de programa y 585 bytes de RAM.
+  1.1.15: 14520 bytes de programa y 583 bytes de RAM.
 - El firmware evita enlazar `scanf`, `printf` y `snprintf`: RTClib construye y
   valida la fecha ISO, mientras que la salida usa impresiones numéricas directas.
   El búfer serial se redujo de 48 a 32 bytes.
-- Veinticinco pruebas aprobadas, incluidas lectura y ajuste del RTC, `RTC OFFLINE`,
+- Veintiocho pruebas aprobadas, incluidas lectura y ajuste del RTC, `RTC OFFLINE`,
   servo, control no bloqueante de la puerta, DHT11, intervalo automático de
   cinco segundos, alarma PIR, iluminación LDR condicionada por la alarma,
-  controles, eventos automáticos y reporte persistente.
+  control de la bomba condicionado por alarma y depósito lleno/vacío, controles,
+  eventos automáticos y reporte persistente.
 - Ejecutar pruebas: `.\.venv\Scripts\python.exe -m unittest -v`.
 - No se cargó firmware ni se realizaron pruebas físicas durante esta
   actualización.

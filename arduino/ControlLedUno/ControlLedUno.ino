@@ -3,6 +3,7 @@
 // DHT11: DATA -> D5, además de VCC y GND.
 // Buzzer: señal -> D6. PIR: OUT -> D7, además de VCC y GND.
 // Fotoresistencia: divisor de voltaje -> A0. LED exterior: ánodo -> D9.
+// Relé de bomba: IN -> D11. Sensor de depósito lleno/vacío: OUT -> D12.
 #include <Arduino.h>
 #include <DHT.h>
 #include <RTClib.h>
@@ -31,39 +32,24 @@ void printState() {
 
 namespace WindowServo {
 constexpr byte kSignalPin = 2;
-constexpr byte kOpenAngle = 89;
+constexpr byte kOpenAngle = 90;
 constexpr byte kClosedAngle = 0;
-constexpr unsigned long kStepIntervalMs = 20;
 Servo motor;
 byte currentAngle = kClosedAngle;
-byte targetAngle = kClosedAngle;
-unsigned long lastStepAt = 0;
 
 void begin() {
   motor.attach(kSignalPin);
   motor.write(kClosedAngle);
   currentAngle = kClosedAngle;
-  targetAngle = kClosedAngle;
-  lastStepAt = millis();
 }
 
 void setOpen(bool openWindow) {
-  targetAngle = openWindow ? kOpenAngle : kClosedAngle;
-}
-
-void update() {
-  if (currentAngle == targetAngle) return;
-
-  const unsigned long now = millis();
-  if (now - lastStepAt < kStepIntervalMs) return;
-  lastStepAt = now;
-
-  currentAngle += currentAngle < targetAngle ? 1 : -1;
+  currentAngle = openWindow ? kOpenAngle : kClosedAngle;
   motor.write(currentAngle);
 }
 
 void printState() {
-  Serial.println(targetAngle == kOpenAngle ? F("SERVO OPEN 89")
+  Serial.println(currentAngle == kOpenAngle ? F("SERVO OPEN 90")
                                            : F("SERVO CLOSED 0"));
 }
 
@@ -359,6 +345,55 @@ void printState() {
 }
 }  // namespace AutomaticLight
 
+namespace WaterTank {
+constexpr byte kRelayPin = 11;
+constexpr byte kFullSensorPin = 12;
+constexpr bool kRelayActiveLow = false;
+constexpr bool kFullSensorActiveLow = true;
+
+bool tankFull = false;
+bool relayOn = false;
+bool eventPending = false;
+
+bool isTankFull() {
+  const bool sensorHigh = digitalRead(kFullSensorPin) == HIGH;
+  return kFullSensorActiveLow ? !sensorHigh : sensorHigh;
+}
+
+void writeRelayPin(bool turnOn) {
+  const byte activeLevel = kRelayActiveLow ? LOW : HIGH;
+  digitalWrite(kRelayPin, turnOn ? activeLevel : !activeLevel);
+}
+
+void setRelay(bool turnOn) {
+  if (relayOn == turnOn) return;
+  relayOn = turnOn;
+  writeRelayPin(relayOn);
+  eventPending = true;
+}
+
+void begin() {
+  writeRelayPin(false);
+  pinMode(kRelayPin, OUTPUT);
+  pinMode(kFullSensorPin, INPUT);
+  tankFull = isTankFull();
+  setRelay(SecurityAlarm::isArmed() && !tankFull);
+}
+
+void update() {
+  tankFull = isTankFull();
+  setRelay(SecurityAlarm::isArmed() && !tankFull);
+}
+
+void printState() {
+  Serial.print(F("WATER FULL "));
+  Serial.print(tankFull ? '1' : '0');
+  Serial.print(relayOn ? F(" RELAY ON EVENT ") : F(" RELAY OFF EVENT "));
+  Serial.println(eventPending ? '1' : '0');
+  eventPending = false;
+}
+}  // namespace WaterTank
+
 namespace ClockModule {
 constexpr byte kDs3231Address = 0x68;
 RTC_DS3231 rtc;
@@ -487,6 +522,8 @@ void execute(const char *input) {
     SecurityAlarm::printState();
   } else if (strcmp_P(input, PSTR("LIGHT STATUS")) == 0) {
     AutomaticLight::printState();
+  } else if (strcmp_P(input, PSTR("WATER STATUS")) == 0) {
+    WaterTank::printState();
   } else {
     Serial.println(F("ERR UNKNOWN_COMMAND"));
   }
@@ -517,13 +554,14 @@ void setup() {
   ClimateSensor::begin();
   SecurityAlarm::begin();
   AutomaticLight::begin();
+  WaterTank::begin();
   ClockModule::begin();
 }
 
 void loop() {
   SerialProtocol::poll();
-  WindowServo::update();
   DoorMotor::update();
   SecurityAlarm::update();
   AutomaticLight::update();
+  WaterTank::update();
 }

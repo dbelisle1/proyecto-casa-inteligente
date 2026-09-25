@@ -19,6 +19,7 @@ from app import (
     dht_values,
     light_values,
     rtc_timestamp,
+    water_values,
 )
 
 
@@ -40,6 +41,9 @@ class FakePort:
         self.ldr_value = 50
         self.external_led_on = False
         self.light_event = False
+        self.tank_full = True
+        self.pump_relay_on = False
+        self.water_event = False
 
     def reset_input_buffer(self):
         self.answer = b""
@@ -63,12 +67,12 @@ class FakePort:
                 self.answer = b"RTC OFFLINE\n"
         elif command == b"SERVO OPEN\n":
             self.servo_open = True
-            self.answer = b"SERVO OPEN 89\n"
+            self.answer = b"SERVO OPEN 90\n"
         elif command == b"SERVO CLOSE\n":
             self.servo_open = False
             self.answer = b"SERVO CLOSED 0\n"
         elif command == b"SERVO STATUS\n":
-            self.answer = b"SERVO OPEN 89\n" if self.servo_open else b"SERVO CLOSED 0\n"
+            self.answer = b"SERVO OPEN 90\n" if self.servo_open else b"SERVO CLOSED 0\n"
         elif command == b"DOOR OPEN\n":
             self.door_open = True
             self.answer = b"DOOR OPEN\n"
@@ -88,16 +92,20 @@ class FakePort:
                 self.alarm_event = True
             self.alarm_armed = True
             self.refresh_light()
+            self.refresh_pump()
             self.answer = self.alarm_answer()
         elif command == b"ALARM OFF\n":
             self.alarm_armed = False
             self.alarm_event = False
             self.refresh_light()
+            self.refresh_pump()
             self.answer = self.alarm_answer()
         elif command == b"ALARM STATUS\n":
             self.answer = self.alarm_answer()
         elif command == b"LIGHT STATUS\n":
             self.answer = self.light_answer()
+        elif command == b"WATER STATUS\n":
+            self.answer = self.water_answer()
         else:
             self.answer = replies.get(command, b"LED 1\n" if self.led else b"LED 0\n")
 
@@ -139,6 +147,25 @@ class FakePort:
         self.light_event = False
         return answer
 
+    def set_tank_full(self, full):
+        self.tank_full = full
+        self.refresh_pump()
+
+    def refresh_pump(self):
+        desired = self.alarm_armed and not self.tank_full
+        if desired != self.pump_relay_on:
+            self.pump_relay_on = desired
+            self.water_event = True
+
+    def water_answer(self):
+        answer = (
+            f"WATER FULL {int(self.tank_full)} "
+            f"RELAY {'ON' if self.pump_relay_on else 'OFF'} "
+            f"EVENT {int(self.water_event)}\n"
+        ).encode()
+        self.water_event = False
+        return answer
+
 
 class ProtocolTests(unittest.TestCase):
     def setUp(self):
@@ -169,6 +196,7 @@ class ProtocolTests(unittest.TestCase):
                     "DHT 24 50",
                     "ALARM DISARMED MOTION 0 EVENT 0",
                     "LIGHT OFF VALUE 50 EVENT 0",
+                    "WATER FULL 1 RELAY OFF EVENT 0",
                 ),
             ),
             events,
@@ -213,10 +241,10 @@ class ProtocolTests(unittest.TestCase):
         self.worker.connection = FakePort()
         self.assertEqual(self.worker.query_servo(), "SERVO CLOSED 0")
         self.assertEqual(
-            self.worker.exchange("SERVO OPEN", {"SERVO OPEN 89"}),
-            "SERVO OPEN 89",
+            self.worker.exchange("SERVO OPEN", {"SERVO OPEN 90"}),
+            "SERVO OPEN 90",
         )
-        self.assertEqual(self.worker.query_servo(), "SERVO OPEN 89")
+        self.assertEqual(self.worker.query_servo(), "SERVO OPEN 90")
         self.assertEqual(
             self.worker.exchange("SERVO CLOSE", {"SERVO CLOSED 0"}),
             "SERVO CLOSED 0",
@@ -334,6 +362,49 @@ class ProtocolTests(unittest.TestCase):
             events,
         )
 
+    def test_full_or_empty_tank_controls_pump_while_alarm_is_armed(self):
+        port = FakePort()
+        self.worker.connection = port
+        self.assertEqual(water_values(self.worker.query_water()), (True, False, False))
+        self.worker.exchange("ALARM ON", accepted_prefixes=("ALARM ",))
+        self.assertEqual(water_values(self.worker.query_water()), (True, False, False))
+        port.set_tank_full(False)
+        self.assertEqual(water_values(self.worker.query_water()), (False, True, True))
+        port.set_tank_full(True)
+        self.assertEqual(water_values(self.worker.query_water()), (True, False, True))
+
+    def test_alarm_controls_pump_but_cannot_override_full_tank(self):
+        port = FakePort()
+        port.set_tank_full(False)
+        self.worker.connection = port
+        self.assertEqual(water_values(self.worker.query_water()), (False, False, False))
+        self.worker.exchange("ALARM ON", accepted_prefixes=("ALARM ",))
+        self.assertEqual(water_values(self.worker.query_water()), (False, True, True))
+        self.worker.exchange("ALARM OFF", accepted_prefixes=("ALARM ",))
+        self.assertEqual(water_values(self.worker.query_water()), (False, False, True))
+        port.set_tank_full(True)
+        self.worker.exchange("ALARM ON", accepted_prefixes=("ALARM ",))
+        self.assertEqual(water_values(self.worker.query_water()), (True, False, False))
+
+    def test_pump_change_generates_automatic_report(self):
+        port = FakePort()
+        port.set_tank_full(False)
+        self.worker.connection = port
+        self.worker.exchange("ALARM ON", accepted_prefixes=("ALARM ",))
+        self.worker.publish_water_state(self.worker.query_water(verbose=False))
+        events = list(self.worker.events.queue)
+        self.assertIn(("water", (False, True)), events)
+        self.assertIn(
+            (
+                "report",
+                (
+                    "2026-09-21 20:30:45",
+                    "AUTOMÁTICO | Depósito vacío | Relé de bomba encendido",
+                ),
+            ),
+            events,
+        )
+
     def test_worker_waits_until_door_finishes_moving(self):
         with patch.object(
             self.worker,
@@ -386,6 +457,7 @@ class ProtocolTests(unittest.TestCase):
                         "DHT OFFLINE",
                         "ALARM DISARMED MOTION 0 EVENT 0",
                         "LIGHT OFF VALUE 50 EVENT 0",
+                        "WATER FULL 1 RELAY OFF EVENT 0",
                     ),
                 )
             )
@@ -415,6 +487,10 @@ class ProtocolTests(unittest.TestCase):
             self.assertEqual(app.dht_label.cget("text"), "DHT11: estado desconocido")
             self.assertEqual(app.alarm_label.cget("text"), "Alarma: estado desconocido")
             self.assertEqual(app.ldr_label.cget("text"), "LDR: estado desconocido")
+            self.assertEqual(
+                app.tank_label.cget("text"),
+                "Depósito: estado desconocido",
+            )
         finally:
             app.destroy()
 
@@ -435,6 +511,7 @@ class ProtocolTests(unittest.TestCase):
                         "DHT 24 50",
                         "ALARM DISARMED MOTION 0 EVENT 0",
                         "LIGHT OFF VALUE 50 EVENT 0",
+                        "WATER FULL 1 RELAY OFF EVENT 0",
                     ),
                 )
             )
@@ -472,6 +549,7 @@ class ProtocolTests(unittest.TestCase):
                         "DHT 24 50",
                         "ALARM DISARMED MOTION 0 EVENT 0",
                         "LIGHT OFF VALUE 50 EVENT 0",
+                        "WATER FULL 1 RELAY OFF EVENT 0",
                     ),
                 )
             )
@@ -481,7 +559,7 @@ class ProtocolTests(unittest.TestCase):
             self.assertEqual(app.commands.get_nowait(), ("servo", True))
             app.events.put(("servo_done", True))
             app.process_events()
-            self.assertEqual(app.servo_label.cget("text"), "Ventana: ABIERTA (89°)")
+            self.assertEqual(app.servo_label.cget("text"), "Ventana: ABIERTA (90°)")
             app.close_window()
             self.assertEqual(app.commands.get_nowait(), ("servo", False))
             app.events.put(("servo_done", False))
@@ -507,6 +585,7 @@ class ProtocolTests(unittest.TestCase):
                         "DHT 24 50",
                         "ALARM DISARMED MOTION 0 EVENT 0",
                         "LIGHT OFF VALUE 50 EVENT 0",
+                        "WATER FULL 1 RELAY OFF EVENT 0",
                     ),
                 )
             )
@@ -557,6 +636,7 @@ class ProtocolTests(unittest.TestCase):
                         "DHT 24 50",
                         "ALARM DISARMED MOTION 0 EVENT 0",
                         "LIGHT OFF VALUE 50 EVENT 0",
+                        "WATER FULL 1 RELAY OFF EVENT 0",
                     ),
                 )
             )
@@ -567,6 +647,10 @@ class ProtocolTests(unittest.TestCase):
                 app.external_led_label.cget("text"),
                 "LED exterior: APAGADO (alarma desactivada)",
             )
+            self.assertEqual(
+                app.tank_label.cget("text"), "Depósito: LLENO"
+            )
+            self.assertEqual(app.pump_label.cget("text"), "Relé de bomba: APAGADO")
             app.activate_alarm()
             self.assertEqual(app.commands.get_nowait(), ("alarm", True))
             app.events.put(("alarm", (True, True)))

@@ -21,6 +21,7 @@ DHT_OFFLINE = "DHT OFFLINE"
 DHT_REPORT_INTERVAL = 5.0
 ALARM_POLL_INTERVAL = 0.25
 LIGHT_POLL_INTERVAL = 0.5
+WATER_POLL_INTERVAL = 0.5
 HEARTBEAT_INTERVAL = 1.0
 WORKER_TICK_INTERVAL = 0.1
 
@@ -107,6 +108,24 @@ def light_values(answer):
     return parts[1] == "ON", ldr_value, parts[5] == "1"
 
 
+def water_values(answer):
+    """Interpreta ``WATER FULL <0|1> RELAY <ON|OFF> EVENT <0|1>``."""
+    parts = answer.split()
+    valid = (
+        len(parts) == 7
+        and parts[0] == "WATER"
+        and parts[1] == "FULL"
+        and parts[2] in ("0", "1")
+        and parts[3] == "RELAY"
+        and parts[4] in ("ON", "OFF")
+        and parts[5] == "EVENT"
+        and parts[6] in ("0", "1")
+    )
+    if not valid:
+        raise ValueError(f"Respuesta del depósito inválida: {answer!r}")
+    return parts[2] == "1", parts[4] == "ON", parts[6] == "1"
+
+
 class ArduinoWorker(threading.Thread):
     """Único propietario del puerto; nunca modifica widgets desde este hilo."""
 
@@ -119,6 +138,7 @@ class ArduinoWorker(threading.Thread):
         self.next_dht_report_at = None
         self.next_alarm_poll_at = None
         self.next_light_poll_at = None
+        self.next_water_poll_at = None
         self.next_heartbeat_at = None
         self.remembered_port = self.load_remembered_port()
 
@@ -175,7 +195,7 @@ class ArduinoWorker(threading.Thread):
 
     def query_servo(self, verbose=True):
         return self.exchange(
-            "SERVO STATUS", {"SERVO OPEN 89", "SERVO CLOSED 0"}, verbose=verbose
+            "SERVO STATUS", {"SERVO OPEN 90", "SERVO CLOSED 0"}, verbose=verbose
         )
 
     def query_door(self, verbose=True):
@@ -208,6 +228,16 @@ class ArduinoWorker(threading.Thread):
         )
         try:
             light_values(answer)
+        except ValueError as error:
+            raise serial.SerialException(str(error)) from error
+        return answer
+
+    def query_water(self, verbose=True):
+        answer = self.exchange(
+            "WATER STATUS", accepted_prefixes=("WATER ",), verbose=verbose
+        )
+        try:
+            water_values(answer)
         except ValueError as error:
             raise serial.SerialException(str(error)) from error
         return answer
@@ -245,6 +275,13 @@ class ArduinoWorker(threading.Thread):
             return self.query_light(verbose=False)
         except (OSError, serial.SerialException) as error:
             self.log(f"No se pudo consultar la iluminación automática: {error}")
+            return None
+
+    def water_for_connection(self):
+        try:
+            return self.query_water(verbose=False)
+        except (OSError, serial.SerialException) as error:
+            self.log(f"No se pudo consultar el depósito de agua: {error}")
             return None
 
     def wait_for_door(self, expected, moving):
@@ -348,6 +385,31 @@ class ArduinoWorker(threading.Thread):
         self.next_light_poll_at = now + LIGHT_POLL_INTERVAL
         self.publish_light_state(self.query_light(verbose=False))
 
+    def publish_water_state(self, answer):
+        try:
+            tank_full, relay_on, event_pending = water_values(answer)
+        except ValueError as error:
+            raise serial.SerialException(str(error)) from error
+        self.events.put(("water", (tank_full, relay_on)))
+        if event_pending:
+            tank_message = "Depósito lleno" if tank_full else "Depósito vacío"
+            relay_message = (
+                "Relé de bomba encendido"
+                if relay_on
+                else "Relé de bomba apagado"
+            )
+            message = f"AUTOMÁTICO | {tank_message} | {relay_message}"
+            self.report(message)
+
+    def maybe_poll_water(self):
+        if self.next_water_poll_at is None:
+            return
+        now = time.monotonic()
+        if now < self.next_water_poll_at:
+            return
+        self.next_water_poll_at = now + WATER_POLL_INTERVAL
+        self.publish_water_state(self.query_water(verbose=False))
+
     def maybe_send_heartbeat(self):
         if self.next_heartbeat_at is None:
             return
@@ -368,6 +430,7 @@ class ArduinoWorker(threading.Thread):
         self.next_dht_report_at = None
         self.next_alarm_poll_at = None
         self.next_light_poll_at = None
+        self.next_water_poll_at = None
         self.next_heartbeat_at = None
         self.events.put(("disconnected", None))
 
@@ -425,12 +488,14 @@ class ArduinoWorker(threading.Thread):
                 dht_state = self.dht_for_connection()
                 alarm_state = self.alarm_for_connection()
                 light_state = self.light_for_connection()
+                water_state = self.water_for_connection()
                 self.log(f"Arduino identificado en {port.device}; estado inicial confirmado.")
                 self.remember_port(port.device)
                 now = time.monotonic()
                 self.next_dht_report_at = now + DHT_REPORT_INTERVAL
                 self.next_alarm_poll_at = now + ALARM_POLL_INTERVAL
                 self.next_light_poll_at = now + LIGHT_POLL_INTERVAL
+                self.next_water_poll_at = now + WATER_POLL_INTERVAL
                 self.next_heartbeat_at = now + HEARTBEAT_INTERVAL
                 self.events.put(
                     (
@@ -444,9 +509,12 @@ class ArduinoWorker(threading.Thread):
                             dht_state,
                             alarm_state,
                             light_state,
+                            water_state,
                         ),
                     )
                 )
+                if water_state is not None:
+                    self.publish_water_state(water_state)
                 return True
             except (OSError, serial.SerialException) as error:
                 self.log(f"ERROR en {port.device}: {error}")
@@ -472,6 +540,7 @@ class ArduinoWorker(threading.Thread):
                     self.maybe_capture_dht_report()
                     self.maybe_poll_alarm()
                     self.maybe_poll_light()
+                    self.maybe_poll_water()
                     self.maybe_send_heartbeat()
                     try:
                         action, value = self.commands.get(timeout=WORKER_TICK_INTERVAL)
@@ -516,13 +585,13 @@ class ArduinoWorker(threading.Thread):
                         elif action == "servo":
                             open_window = bool(value)
                             report_message = (
-                                "CONTROL MANUAL | Botón Abrir ventana presionado (89 grados)"
+                                "CONTROL MANUAL | Botón Abrir ventana presionado (90 grados)"
                                 if open_window
                                 else "CONTROL MANUAL | Botón Cerrar ventana presionado (0 grados)"
                             )
                             rtc_answer = self.rtc_for_report()
                             command = "SERVO OPEN" if open_window else "SERVO CLOSE"
-                            expected = "SERVO OPEN 89" if open_window else "SERVO CLOSED 0"
+                            expected = "SERVO OPEN 90" if open_window else "SERVO CLOSED 0"
                             self.log(
                                 f"Acción: {'abrir' if open_window else 'cerrar'} la ventana con el servomotor."
                             )
@@ -588,7 +657,7 @@ class App(tk.Tk):
     def __init__(self, report_path=REPORT_FILE):
         super().__init__()
         self.title("Casa inteligente · Arduino UNO")
-        self.geometry("980x700")
+        self.geometry("980x720")
         self.minsize(820, 560)
         self.report_path = Path(report_path)
         self.events, self.commands = queue.Queue(), queue.Queue()
@@ -605,6 +674,8 @@ class App(tk.Tk):
         self.pir_motion = None
         self.external_led_on = None
         self.ldr_value = None
+        self.tank_full = None
+        self.pump_relay_on = None
         self.closing = False
         frame = ttk.Frame(self, padding=20)
         frame.pack(fill="both", expand=True)
@@ -697,6 +768,21 @@ class App(tk.Tk):
         )
         self.door_close_button.pack(side="left", padx=(8, 0))
 
+        ttk.Separator(self.left_controls).pack(fill="x", pady=(4, 12))
+        ttk.Label(
+            self.left_controls,
+            text="Depósito · Bomba",
+            font=("Segoe UI", 12, "bold"),
+        ).pack(anchor="w")
+        self.tank_label = ttk.Label(
+            self.left_controls, text="Depósito: estado desconocido"
+        )
+        self.tank_label.pack(anchor="w", pady=(4, 0))
+        self.pump_label = ttk.Label(
+            self.left_controls, text="Relé de bomba: estado desconocido"
+        )
+        self.pump_label.pack(anchor="w", pady=(2, 10))
+
         ttk.Label(
             self.right_controls,
             text="Clima · Sensor DHT11",
@@ -773,7 +859,7 @@ class App(tk.Tk):
         self.rtc_set_button.configure(state=rtc_button_state)
         self.rtc_read_button.configure(state=rtc_button_state)
         if self.connected and self.window_open is not None:
-            servo_text = "Ventana: ABIERTA (89°)" if self.window_open else "Ventana: CERRADA (0°)"
+            servo_text = "Ventana: ABIERTA (90°)" if self.window_open else "Ventana: CERRADA (0°)"
         else:
             servo_text = "Ventana: posición desconocida"
         self.servo_label.configure(text=servo_text)
@@ -831,6 +917,20 @@ class App(tk.Tk):
         else:
             self.ldr_label.configure(text="LDR: estado desconocido")
             self.external_led_label.configure(text="LED exterior: estado desconocido")
+        if self.connected and self.tank_full is not None:
+            self.tank_label.configure(
+                text="Depósito: LLENO" if self.tank_full else "Depósito: VACÍO"
+            )
+            self.pump_label.configure(
+                text=(
+                    "Relé de bomba: ENCENDIDO"
+                    if self.pump_relay_on
+                    else "Relé de bomba: APAGADO"
+                )
+            )
+        else:
+            self.tank_label.configure(text="Depósito: estado desconocido")
+            self.pump_label.configure(text="Relé de bomba: estado desconocido")
 
     def toggle(self):
         if self.connected and not self.busy:
@@ -857,7 +957,7 @@ class App(tk.Tk):
     def set_window(self, open_window):
         if self.connected and not self.busy:
             self.busy, self.busy_action = True, "servo"
-            position = 89 if open_window else 0
+            position = 90 if open_window else 0
             action = "abrir" if open_window else "cerrar"
             self.append_log(f"Acción: {action} la ventana; posición solicitada: {position}°.")
             self.commands.put(("servo", open_window))
@@ -931,11 +1031,12 @@ class App(tk.Tk):
                     self.dht_answer,
                     alarm_answer,
                     light_answer,
+                    water_answer,
                 ) = value
                 self.connected, self.busy, self.busy_action = True, False, None
                 self.window_open = (
                     True
-                    if servo_answer == "SERVO OPEN 89"
+                    if servo_answer == "SERVO OPEN 90"
                     else False if servo_answer == "SERVO CLOSED 0" else None
                 )
                 self.door_open = (
@@ -951,6 +1052,14 @@ class App(tk.Tk):
                     self.external_led_on, self.ldr_value = None, None
                 else:
                     self.external_led_on, self.ldr_value, _ = light_values(light_answer)
+                if water_answer is None:
+                    self.tank_full, self.pump_relay_on = None, None
+                else:
+                    (
+                        self.tank_full,
+                        self.pump_relay_on,
+                        _,
+                    ) = water_values(water_answer)
                 self.connection_label.configure(text=f"Conectado: Arduino UNO · {port} · 9600 baudios")
                 self.rtc_label.configure(text=f"RTC: {rtc_timestamp(rtc_answer)}")
             elif kind == "disconnected":
@@ -962,6 +1071,8 @@ class App(tk.Tk):
                 self.pir_motion = None
                 self.external_led_on = None
                 self.ldr_value = None
+                self.tank_full = None
+                self.pump_relay_on = None
                 self.connection_label.configure(text="Sin conexión · búsqueda automática activa")
                 self.rtc_label.configure(text="RTC: estado desconocido")
             elif kind in ("done", "state"):
@@ -985,6 +1096,8 @@ class App(tk.Tk):
                 self.busy, self.busy_action = False, None
             elif kind == "light":
                 self.external_led_on, self.ldr_value = value
+            elif kind == "water":
+                self.tank_full, self.pump_relay_on = value
             self.render()
         if not self.closing:
             self.after(100, self.process_events)

@@ -69,7 +69,7 @@ GND -> GND compartido con el Arduino
 El sketch también utiliza la biblioteca oficial "Servo". Si Arduino IDE no la
 encuentra al compilar, instalarla desde el gestor de bibliotecas.
 
-Posición abierta -> 89 grados
+Posición abierta -> 90 grados
 Posición cerrada -> 0 grados
 
 Para el módulo L298N y el motor DC:
@@ -119,6 +119,23 @@ Con este divisor la lectura disminuye al oscurecer. El LED se enciende con una
 lectura menor que 500; el umbral se
 configura con kDarkThreshold en el sketch. El LED siempre permanece apagado si
 la alarma está desactivada.
+
+Para el sensor de depósito lleno/vacío y el relé de la bomba:
+
+OUT del sensor de lleno/vacío -> D12
+IN del módulo relé -> D11
+VCC y GND -> según la especificación de cada módulo
+Fuente de la bomba -> contactos COM y NO del relé -> bomba
+
+No alimentar la bomba desde el Arduino. El sketch está configurado para un relé
+trigger HIGH, activo en nivel alto (kRelayActiveLow = false), y un sensor de
+lleno activo en nivel bajo (kFullSensorActiveLow = true). Un LOW en D12 indica
+depósito lleno y siempre apaga el relé. Un HIGH indica depósito vacío y permite
+encenderlo solo cuando la alarma está activa. Desactivar la alarma apaga
+la bomba; volver a activarla no anula la protección de depósito lleno. No dejar
+D12 flotante; usar una resistencia pull-up o pull-down si el sensor no entrega
+un nivel lógico definido. Para la primera prueba, verificar el relé sin conectar
+la bomba.
 
 Luego cerrar el Monitor Serial y el Serial Plotter de Arduino IDE para dejar
 libre el puerto USB.
